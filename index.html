@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Sunbot Giáo viên</title>
+
+    <!-- Sunbot Teacher Portal install icon -->
     <link rel="manifest" href="./manifest.webmanifest">
-    <meta name="theme-color" content="#ff7a00">
+    <meta name="theme-color" content="#FF6B00">
     <meta name="apple-mobile-web-app-title" content="Sunbot GV">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="icon" href="./icon.svg" type="image/svg+xml">
@@ -99,6 +101,7 @@
             // CHÚ Ý: CHÈN LINK WEB APP URL CỦA BẠN VÀO DÒNG BÊN DƯỚI
             // =========================================================
             const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyXRKYQf29V8wv345RQTqvACXbxwYn-kxDop59v3Oc1ll495b442OOJ4h2P8cLGHNrz2A/exec";
+            const EVALUATION_APP_URL = "https://sunbotvietnam.github.io/report/";
 
             useEffect(() => {
                 const s = localStorage.getItem('sb_ios_v3');
@@ -152,6 +155,28 @@
                     {loading && <div className="fixed inset-0 z-[999] bg-black/60 flex flex-col items-center justify-center text-white backdrop-blur-sm"><div className="loader mb-3"></div><div className="font-bold">ĐANG GỬI DỮ LIỆU...</div><div className="text-xs mt-1 text-gray-300">Vui lòng không đóng ứng dụng</div></div>}
                     
                     <NavHeader title="Tạo Báo Cáo Ca Học" />
+
+                    {/* LỐI TẮT SANG APP ĐÁNH GIÁ CUỐI NĂM */}
+                    <div className="mx-4 mt-4">
+                        <button
+                            type="button"
+                            onClick={() => window.location.href = EVALUATION_APP_URL}
+                            className="w-full bg-gradient-to-r from-[#FF6B00] to-amber-400 text-white rounded-2xl p-4 shadow-xl shadow-orange-200/60 active-scale flex items-center justify-between"
+                        >
+                            <div className="flex items-center gap-3 text-left">
+                                <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shadow-inner">
+                                    <i className="fa-solid fa-clipboard-check text-[22px]"></i>
+                                </div>
+                                <div>
+                                    <div className="font-bold text-[16px]">Đánh giá cuối năm</div>
+                                    <div className="text-[12px] text-white/90 font-medium leading-snug">
+                                        Bổ sung ảnh cá nhân & đánh giá 3 tiêu chí
+                                    </div>
+                                </div>
+                            </div>
+                            <i className="fa-solid fa-chevron-right text-white/80 text-[16px]"></i>
+                        </button>
+                    </div>
                     
                     <div className="flex-grow">
                         <SectionTitle title="Thông tin chung" />
