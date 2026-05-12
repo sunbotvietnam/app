@@ -53,6 +53,42 @@
           </select>
         </div>
         <div class="hint mt-2">Danh mục lấy từ Impact OS. Nếu mới mở app, hãy chờ hệ thống tải xong trước khi nộp.</div>
+        <button type="button" onclick="toggleMyImpactPanel()" class="mt-3 w-full h-10 rounded-xl bg-gray-900 text-white font-bold active-scale text-sm">Hồ sơ của tôi</button>
+      </div>
+
+      <div id="receiptBox" class="hidden card p-4 mb-4 border-green-200 bg-green-50">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-black">✓</div>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-green-800">Đã ghi nhận Hành trình Sunbot</div>
+            <div id="receiptSummary" class="text-sm text-green-700 mt-1 leading-relaxed"></div>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-3">
+          <button type="button" onclick="sendImpactReceipt()" class="h-10 rounded-xl bg-green-600 text-white font-bold active-scale text-sm">Gửi email</button>
+          <button type="button" onclick="closeReceipt()" class="h-10 rounded-xl bg-white border border-green-200 text-green-700 font-bold active-scale text-sm">Đóng</button>
+        </div>
+      </div>
+
+      <div id="myImpactPanel" class="hidden card p-4 mb-4">
+        <div class="font-bold text-gray-900 mb-1">Hồ sơ của tôi</div>
+        <div class="hint mb-3">Nhập mã PIN cá nhân để xem các hồ sơ, sự kiện, câu chuyện và thẻ ký ức đã nộp.</div>
+        <select id="myTeacherSelect" class="input mb-2">
+          <option value="">Chọn giáo viên/leader</option>
+        </select>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <input id="myPin" type="password" inputmode="numeric" class="input" placeholder="Mã PIN" />
+          <select id="myPeriod" class="input">
+            <option value="today">Hôm nay</option>
+            <option value="week">Tuần này</option>
+            <option value="month" selected>Tháng này</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" onclick="loadMyImpactSubmissions()" class="h-10 rounded-xl bg-orange-500 text-white font-bold active-scale text-sm">Xem hồ sơ</button>
+          <button type="button" onclick="toggleMyImpactPanel(false)" class="h-10 rounded-xl bg-white border border-gray-200 text-gray-600 font-bold active-scale text-sm">Đóng</button>
+        </div>
+        <div id="myImpactResult" class="mt-3 space-y-2"></div>
       </div>
 
       <form id="form-class" class="space-y-4" onsubmit="submitClassPortfolio(event)">
@@ -178,7 +214,7 @@
   </div>
 
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxt-LRPHPfTCaSdGdU7KJWyf18vDGXwbao_hyD0lN9MUgIht9ODuaHmJAD1w1uwE36rkQ/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzse_WK_1LYurscgU2TQTfKnTckkdGsJLHIc_zxJIaTXbR6jryPFoLJeT3n5j1bPTNm5w/exec";
 
 const quotes = [
   "Mỗi khoảnh khắc thật là một bằng chứng giáo dục.",
@@ -193,6 +229,7 @@ const quotes = [
 
 let CONFIG = { schools: [], classes: [], teachers: [], lessons: [] };
 let CURRENT_TAB = "class";
+let LAST_RECEIPT = null;
 
 document.getElementById("quote").textContent = quotes[Math.floor(Math.random() * quotes.length)];
 window.addEventListener("load", init);
@@ -242,6 +279,7 @@ async function init() {
 
 function renderConfig() {
   fillSelect("teacherSelect", CONFIG.teachers || [], "teacher_id", "teacher_name", "Chọn giáo viên/leader");
+  fillSelect("myTeacherSelect", CONFIG.teachers || [], "teacher_id", "teacher_name", "Chọn giáo viên/leader");
   fillSelect("schoolSelect", CONFIG.schools || [], "school_id", "school_name", "Chọn trường");
   fillLessons();
 }
@@ -338,19 +376,132 @@ function commonData() {
   };
 }
 
-async function post(action, data) {
+async function post(action, data, rawPayload) {
   if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_")) {
     throw new Error("Chưa dán WEB_APP_URL trong file HTML.");
   }
   showLoading(true, "Đang gửi dữ liệu...");
+  const body = rawPayload ? JSON.stringify({ action, ...rawPayload }) : JSON.stringify({ action, data });
   const res = await fetch(WEB_APP_URL, {
     method: "POST",
-    body: JSON.stringify({ action, data })
+    body
   });
   const out = await res.json();
   showLoading(false);
   if (out.status !== "success") throw new Error(out.message || "Gửi không thành công");
   return out;
+}
+
+
+function setReceipt(sourceType, sourceId, title, lines) {
+  LAST_RECEIPT = { source_type: sourceType, source_id: sourceId, title, lines: lines || [] };
+  const box = document.getElementById("receiptBox");
+  const summary = document.getElementById("receiptSummary");
+  summary.innerHTML = `<b>${escapeHtml(title)}</b><br>Mã ghi nhận: <b>${escapeHtml(sourceId)}</b><br>${(lines || []).map(escapeHtml).join("<br>")}`;
+  box.classList.remove("hidden");
+  box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeReceipt() {
+  LAST_RECEIPT = null;
+  document.getElementById("receiptBox").classList.add("hidden");
+}
+
+async function sendImpactReceipt() {
+  try {
+    if (!LAST_RECEIPT) throw new Error("Chưa có biên nhận để gửi.");
+    const out = await post("send_impact_receipt", null, {
+      source_type: LAST_RECEIPT.source_type,
+      source_id: LAST_RECEIPT.source_id
+    });
+    showMessage("Đã gửi biên nhận về email giáo viên/leader.");
+  } catch (err) {
+    showLoading(false);
+    showMessage(err.message, "err");
+  }
+}
+
+function toggleMyImpactPanel(force) {
+  const panel = document.getElementById("myImpactPanel");
+  const open = typeof force === "boolean" ? force : panel.classList.contains("hidden");
+  panel.classList.toggle("hidden", !open);
+  if (open) {
+    const currentTeacher = document.getElementById("teacherSelect").value;
+    if (currentTeacher && !document.getElementById("myTeacherSelect").value) {
+      document.getElementById("myTeacherSelect").value = currentTeacher;
+    }
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+async function loadMyImpactSubmissions() {
+  const teacherId = document.getElementById("myTeacherSelect").value;
+  const pin = document.getElementById("myPin").value.trim();
+  const period = document.getElementById("myPeriod").value;
+  const resultBox = document.getElementById("myImpactResult");
+
+  try {
+    if (!teacherId) throw new Error("Vui lòng chọn giáo viên/leader.");
+    if (!pin) throw new Error("Vui lòng nhập mã PIN.");
+
+    resultBox.innerHTML = `<div class="hint">Đang tải hồ sơ...</div>`;
+    const out = await post("get_my_impact_submissions", null, {
+      teacher_id: teacherId,
+      teacher_pin: pin,
+      period
+    });
+    const data = out.result || {};
+    renderMyImpactResult(data);
+  } catch (err) {
+    showLoading(false);
+    resultBox.innerHTML = `<div class="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderMyImpactResult(data) {
+  const box = document.getElementById("myImpactResult");
+  const items = data.items || [];
+  const counts = data.counts || {};
+  const header = `
+    <div class="p-3 rounded-xl bg-orange-50 border border-orange-100 text-orange-800 text-sm">
+      <b>${escapeHtml(data.teacher_name || "")}</b> · ${escapeHtml(data.period_label || "")}<br>
+      Tổng: <b>${items.length}</b> mục · Lớp: ${counts.class_portfolio || 0} · Sự kiện: ${counts.event_portfolio || 0} · Cá nhân: ${counts.personal_story || 0} · Ký ức: ${counts.memory_card || 0}
+    </div>
+  `;
+  if (!items.length) {
+    box.innerHTML = header + `<div class="hint p-2">Chưa có hồ sơ nào trong kỳ này.</div>`;
+    return;
+  }
+
+  const rows = items.map(item => `
+    <div class="rounded-xl border border-gray-100 bg-white p-3">
+      <div class="flex justify-between gap-2 text-[11px] text-gray-500">
+        <span>${escapeHtml(labelSourceType(item.source_type))}</span>
+        <span>${escapeHtml(item.status || "pending")}</span>
+      </div>
+      <div class="font-bold text-gray-900 text-sm mt-1">${escapeHtml(item.title || "")}</div>
+      <div class="text-xs text-gray-600 mt-0.5">${escapeHtml([item.school_name, item.class_names].filter(Boolean).join(" · "))}</div>
+      ${item.summary ? `<div class="text-xs text-gray-500 mt-2 line-clamp-2">${escapeHtml(item.summary)}</div>` : ""}
+    </div>
+  `).join("");
+  box.innerHTML = header + rows;
+}
+
+function labelSourceType(type) {
+  return {
+    class_portfolio: "Hồ sơ lớp",
+    event_portfolio: "Sự kiện",
+    personal_story: "Câu chuyện cá nhân",
+    memory_card: "Thẻ ký ức"
+  }[type] || type || "";
+}
+
+function escapeHtml(value) {
+  return String(value === null || value === undefined ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 async function submitClassPortfolio(e) {
@@ -371,7 +522,13 @@ async function submitClassPortfolio(e) {
       media_support_needed: val("classNeedMedia"),
       note: val("classNote")
     };
-    await post("class_portfolio", data);
+    const out = await post("class_portfolio", data);
+    const id = out.result && out.result.id;
+    setReceipt("class_portfolio", id, `Hồ sơ lớp ${cls.class_name || ""}`, [
+      `Trường: ${data.school_name || ""}`,
+      `Lớp: ${cls.class_name || ""}`,
+      `Trạng thái: Chờ leader duyệt`
+    ]);
     showMessage("Đã gửi hồ sơ lớp thành công.");
     e.target.reset();
   } catch (err) {
@@ -398,7 +555,13 @@ async function submitEventPortfolio(e) {
       media_support_needed: val("eventNeedMedia")
     };
     if (!data.event_type) throw new Error("Vui lòng chọn loại hoạt động.");
-    await post("event_portfolio", data);
+    const out = await post("event_portfolio", data);
+    const id = out.result && out.result.id;
+    setReceipt("event_portfolio", id, data.event_type || "Sự kiện Sunbot", [
+      `Trường: ${data.school_name || ""}`,
+      `Lớp: ${data.class_names || "toàn trường/khu vực"}`,
+      `Trạng thái: Chờ leader duyệt`
+    ]);
     showMessage("Đã gửi thông tin sự kiện thành công.");
     e.target.reset();
   } catch (err) {
@@ -420,7 +583,13 @@ async function submitPersonalStory(e) {
       self_recognition: val("storySelfRecognition")
     };
     if (!data.role || !data.category || !data.product_link) throw new Error("Vui lòng điền vai trò, hạng mục và link sản phẩm.");
-    await post("personal_story", data);
+    const out = await post("personal_story", data);
+    const id = out.result && out.result.id;
+    setReceipt("personal_story", id, data.category || "Câu chuyện cá nhân", [
+      `Người nộp: ${data.person_name || ""}`,
+      `Hình thức: ${data.format || ""}`,
+      `Trạng thái: Chờ duyệt`
+    ]);
     showMessage("Đã gửi chia sẻ hành trình cá nhân.");
     e.target.reset();
   } catch (err) {
@@ -447,7 +616,13 @@ async function submitMemoryCard(e) {
       selected_for_award: document.getElementById("nominateMoment").checked
     };
     if (!data.memory_title || !data.moment_description) throw new Error("Vui lòng nhập tiêu đề và mô tả khoảnh khắc.");
-    await post("memory_card", data);
+    const out = await post("memory_card", data);
+    const id = out.result && out.result.id;
+    setReceipt("memory_card", id, data.memory_title || "Thẻ ký ức", [
+      `Trường: ${data.school_name || ""}`,
+      `Lớp: ${data.class_names || ""}`,
+      `Trạng thái: Chờ leader duyệt`
+    ]);
     showMessage("Đã gửi Thẻ ký ức lớp học.");
     e.target.reset();
   } catch (err) {
