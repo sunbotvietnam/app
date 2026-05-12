@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Hành trình Sunbot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; background:#f6f7fb; }
+    input, select, textarea { font-size:16px !important; }
+    .active-scale:active { transform: scale(.98); opacity:.85; }
+    .tab-active { background:#ff6b00; color:#fff; box-shadow:0 8px 20px rgba(255,107,0,.22); }
+    .tab-inactive { background:#fff; color:#4b5563; }
+    .card { background:#fff; border:1px solid #eee; border-radius:18px; box-shadow:0 6px 18px rgba(15,23,42,.04); }
+    .input { width:100%; height:44px; border:1px solid #e5e7eb; border-radius:12px; padding:0 12px; outline:none; background:#fff; }
+    .textarea { width:100%; border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; outline:none; background:#fff; }
+    .hint { font-size:12px; color:#6b7280; }
+    .label { font-size:12px; font-weight:700; color:#f97316; text-transform:uppercase; letter-spacing:.04em; margin:4px 0 6px; }
+    .loader { border:3px solid #fff3e8; border-top:3px solid #ff6b00; border-radius:50%; width:20px; height:20px; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="app" class="max-w-xl mx-auto min-h-screen pb-10">
+    <div class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-orange-100">
+      <div class="px-4 py-3 flex items-center gap-3">
+        <img src="https://static.sunbot.vn/static/images/lesson/11461/logo-sunbot-1.png" class="w-10 h-10 rounded-xl object-contain bg-orange-50 p-1" />
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-gray-900 leading-tight">Hành trình Sunbot</div>
+          <div id="quote" class="text-[12px] text-gray-500 truncate">Mỗi khoảnh khắc thật là một bằng chứng giáo dục.</div>
+        </div>
+      </div>
+      <div id="loadStatus" class="hidden px-4 pb-2 text-xs text-orange-700 flex items-center gap-2">
+        <span class="loader"></span><span>Vui lòng chờ hệ thống tải dữ liệu...</span>
+      </div>
+    </div>
+
+    <div class="p-4">
+      <div class="grid grid-cols-4 gap-2 mb-4 text-[12px] font-bold">
+        <button id="tab-class" class="tab-active rounded-xl py-2 active-scale" onclick="switchTab('class')">Lớp</button>
+        <button id="tab-event" class="tab-inactive rounded-xl py-2 active-scale" onclick="switchTab('event')">Sự kiện</button>
+        <button id="tab-story" class="tab-inactive rounded-xl py-2 active-scale" onclick="switchTab('story')">Cá nhân</button>
+        <button id="tab-memory" class="tab-inactive rounded-xl py-2 active-scale" onclick="switchTab('memory')">Ký ức</button>
+      </div>
+
+      <div id="commonBox" class="card p-3 mb-4">
+        <div class="grid grid-cols-2 gap-2">
+          <select id="teacherSelect" class="input" onchange="onTeacherChange()">
+            <option value="">Chọn giáo viên/leader</option>
+          </select>
+          <select id="schoolSelect" class="input" onchange="onSchoolChange()">
+            <option value="">Chọn trường</option>
+          </select>
+        </div>
+        <div class="hint mt-2">Danh mục lấy từ Impact OS. Nếu mới mở app, hãy chờ hệ thống tải xong trước khi nộp.</div>
+      </div>
+
+      <form id="form-class" class="space-y-4" onsubmit="submitClassPortfolio(event)">
+        <div class="card p-4">
+          <div class="font-bold text-gray-900 mb-2">Nộp hồ sơ tổng kết lớp</div>
+          <div class="hint mb-3">Mỗi lớp 1 video/slide ảnh khoảng 1 phút + folder ảnh/video gốc chọn lọc.</div>
+          <select id="classPortfolioClass" class="input mb-2">
+            <option value="">Chọn lớp</option>
+          </select>
+          <input id="classVideoLink" class="input mb-2" placeholder="Link video/slide ảnh tổng kết lớp" />
+          <input id="classAssetFolder" class="input mb-2" placeholder="Link folder ảnh/video gốc chọn lọc" />
+          <textarea id="top3Moments" class="textarea mb-2" rows="3" placeholder="3 khoảnh khắc đáng nhớ của lớp"></textarea>
+          <textarea id="growthSignal" class="textarea mb-2" rows="2" placeholder="Trẻ/lớp đã tiến bộ rõ nhất ở điểm nào?"></textarea>
+          <label class="flex items-center gap-2 text-sm mb-2">
+            <input id="nominateClass" type="checkbox" class="w-4 h-4" /> Đề cử Lớp học đáng nhớ
+          </label>
+          <select id="classNeedMedia" class="input mb-2">
+            <option value="">Media có cần hỗ trợ không?</option>
+            <option>Có, cần dựng video/report</option>
+            <option>Không, giáo viên đã có output tương đối đủ</option>
+            <option>Chưa rõ, leader xem giúp</option>
+          </select>
+          <textarea id="classNote" class="textarea" rows="2" placeholder="Ghi chú thêm nếu cần"></textarea>
+          <button class="w-full mt-3 h-12 rounded-2xl bg-orange-500 text-white font-bold active-scale">Gửi hồ sơ lớp</button>
+        </div>
+      </form>
+
+      <form id="form-event" class="hidden space-y-4" onsubmit="submitEventPortfolio(event)">
+        <div class="card p-4">
+          <div class="font-bold text-gray-900 mb-2">Nộp Sunbot Day / Festival</div>
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <select id="eventType" class="input">
+              <option value="">Loại hoạt động</option>
+              <option>Sunbot Day cấp lớp</option>
+              <option>Sunbot Festival cấp trường</option>
+              <option>Demo/Trải nghiệm</option>
+              <option>Hoạt động đặc biệt</option>
+            </select>
+            <input id="eventDate" type="date" class="input" />
+          </div>
+          <select id="eventLevel" class="input mb-2">
+            <option value="">Cấp hoạt động</option>
+            <option>Lớp</option>
+            <option>Trường</option>
+            <option>Khu vực</option>
+          </select>
+          <div id="eventClassList" class="grid grid-cols-3 gap-2 mb-2"></div>
+          <input id="eventVideoLink" class="input mb-2" placeholder="Link video recap nếu có" />
+          <input id="eventAssetFolder" class="input mb-2" placeholder="Link folder ảnh/video gốc" />
+          <textarea id="eventHighlight" class="textarea mb-2" rows="3" placeholder="Điểm nổi bật của hoạt động"></textarea>
+          <textarea id="eventFeedback" class="textarea mb-2" rows="2" placeholder="Phản hồi trường/phụ huynh nếu có"></textarea>
+          <select id="eventNeedMedia" class="input mb-2">
+            <option value="">Media có cần hỗ trợ không?</option>
+            <option>Có, cần dựng video/report</option>
+            <option>Không</option>
+            <option>Chưa rõ, leader xem giúp</option>
+          </select>
+          <button class="w-full mt-3 h-12 rounded-2xl bg-orange-500 text-white font-bold active-scale">Gửi sự kiện</button>
+        </div>
+      </form>
+
+      <form id="form-story" class="hidden space-y-4" onsubmit="submitPersonalStory(event)">
+        <div class="card p-4">
+          <div class="font-bold text-gray-900 mb-2">Chia sẻ hành trình cá nhân</div>
+          <select id="storyRole" class="input mb-2">
+            <option value="">Vai trò</option>
+            <option>Giáo viên</option>
+            <option>Leader</option>
+          </select>
+          <select id="storyCategory" class="input mb-2">
+            <option value="">Hạng mục</option>
+            <option>Người kể chuyện lớp học</option>
+            <option>Dấu ấn Sunbot</option>
+          </select>
+          <select id="storyFormat" class="input mb-2">
+            <option value="">Hình thức sản phẩm</option>
+            <option>Bài viết</option>
+            <option>Slide</option>
+            <option>Video</option>
+            <option>Album ảnh có chú thích</option>
+            <option>Kết hợp nhiều hình thức</option>
+          </select>
+          <input id="storyProductLink" class="input mb-2" placeholder="Link sản phẩm: bài/slide/video/album" />
+          <input id="storyEvidenceLink" class="input mb-2" placeholder="Link minh chứng kèm theo nếu có" />
+          <textarea id="storySummary" class="textarea mb-2" rows="3" placeholder="Tóm tắt câu chuyện trong 3 câu"></textarea>
+          <textarea id="storySelfRecognition" class="textarea" rows="2" placeholder="Tôi muốn được ghi nhận ở điểm nào?"></textarea>
+          <button class="w-full mt-3 h-12 rounded-2xl bg-orange-500 text-white font-bold active-scale">Gửi chia sẻ cá nhân</button>
+        </div>
+      </form>
+
+      <form id="form-memory" class="hidden space-y-4" onsubmit="submitMemoryCard(event)">
+        <div class="card p-4">
+          <div class="font-bold text-gray-900 mb-2">Ghi Thẻ ký ức lớp học</div>
+          <div class="hint mb-3">Dùng lâu dài sau mỗi ca học khi có khoảnh khắc đáng nhớ. Không bắt buộc buổi nào cũng có.</div>
+          <div id="memoryClassList" class="grid grid-cols-3 gap-2 mb-2"></div>
+          <select id="memoryLesson" class="input mb-2">
+            <option value="">Chọn bài học nếu nhớ</option>
+          </select>
+          <input id="memoryTitle" class="input mb-2" placeholder="Tiêu đề khoảnh khắc" />
+          <textarea id="memoryDescription" class="textarea mb-2" rows="3" placeholder="Kể ngắn khoảnh khắc này trong 2–3 câu"></textarea>
+          <select id="memorySignal" class="input mb-2">
+            <option value="">Trẻ/lớp đã thể hiện điều gì?</option>
+            <option>Hợp tác với bạn</option>
+            <option>Biết thử lại khi robot đi sai</option>
+            <option>Mạnh dạn tham gia</option>
+            <option>Biết chờ lượt</option>
+            <option>Tự phân vai trong nhóm</option>
+            <option>Có ý tưởng sáng tạo</option>
+            <option>Khác</option>
+          </select>
+          <textarea id="memoryInsight" class="textarea mb-2" rows="2" placeholder="Insight giáo viên/leader về giá trị giáo dục"></textarea>
+          <input id="memoryPhotoLinks" class="input mb-2" placeholder="Link ảnh/folder ảnh minh chứng" />
+          <input id="memoryVideoLink" class="input mb-2" placeholder="Link video nếu có" />
+          <label class="flex items-center gap-2 text-sm mb-2">
+            <input id="nominateMoment" type="checkbox" class="w-4 h-4" /> Đề cử Khoảnh khắc Ánh sáng
+          </label>
+          <button class="w-full mt-3 h-12 rounded-2xl bg-orange-500 text-white font-bold active-scale">Gửi thẻ ký ức</button>
+        </div>
+      </form>
+
+      <div id="message" class="hidden mt-4 p-3 rounded-xl text-sm"></div>
+    </div>
+  </div>
+
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxt-LRPHPfTCaSdGdU7KJWyf18vDGXwbao_hyD0lN9MUgIht9ODuaHmJAD1w1uwE36rkQ/exec";
+
+const quotes = [
+  "Mỗi khoảnh khắc thật là một bằng chứng giáo dục.",
+  "Một lớp học có dấu ấn là lớp học được quan sát bằng trái tim và ghi nhận bằng hệ thống.",
+  "Công nghệ không thay người thầy; công nghệ giúp người thầy nhìn thấy nhiều điều hơn.",
+  "Khi trẻ thử lại, đó là lúc tư duy bắt đầu lớn lên.",
+  "Một bức ảnh tốt không chỉ đẹp; nó kể được điều trẻ đã học.",
+  "Giáo dục STEAM bắt đầu từ sự tò mò rất nhỏ của trẻ.",
+  "Người giáo viên tốt không chỉ dạy xong một bài, mà để lại một hành trình.",
+  "Sunbot ghi lại điều thật, để giá trị không trôi qua."
+];
+
+let CONFIG = { schools: [], classes: [], teachers: [], lessons: [] };
+let CURRENT_TAB = "class";
+
+document.getElementById("quote").textContent = quotes[Math.floor(Math.random() * quotes.length)];
+window.addEventListener("load", init);
+
+function showLoading(on, text) {
+  const el = document.getElementById("loadStatus");
+  if (on) {
+    el.classList.remove("hidden");
+    el.querySelector("span:last-child").textContent = text || "Vui lòng chờ hệ thống tải dữ liệu...";
+  } else {
+    el.classList.add("hidden");
+  }
+}
+
+function showMessage(text, type="ok") {
+  const el = document.getElementById("message");
+  el.textContent = text;
+  el.className = "mt-4 p-3 rounded-xl text-sm " + (type === "ok" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200");
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 5000);
+}
+
+async function init() {
+  showLoading(true, "Vui lòng chờ hệ thống tải danh mục...");
+  try {
+    const cache = localStorage.getItem("sunbot_impact_config_v1");
+    if (cache) {
+      CONFIG = JSON.parse(cache);
+      renderConfig();
+    }
+
+    const res = await fetch(WEB_APP_URL + "?action=config");
+    const data = await res.json();
+    if (data.status === "success") {
+      CONFIG = data;
+      localStorage.setItem("sunbot_impact_config_v1", JSON.stringify(CONFIG));
+      renderConfig();
+    } else {
+      throw new Error(data.message || "Không tải được danh mục");
+    }
+  } catch (err) {
+    showMessage("Không tải được dữ liệu mới. App đang dùng cache nếu có. Lỗi: " + err.message, "err");
+  } finally {
+    showLoading(false);
+  }
+}
+
+function renderConfig() {
+  fillSelect("teacherSelect", CONFIG.teachers || [], "teacher_id", "teacher_name", "Chọn giáo viên/leader");
+  fillSelect("schoolSelect", CONFIG.schools || [], "school_id", "school_name", "Chọn trường");
+  fillLessons();
+}
+
+function fillSelect(id, rows, valueKey, labelKey, placeholder) {
+  const el = document.getElementById(id);
+  el.innerHTML = `<option value="">${placeholder}</option>`;
+  rows.forEach(r => {
+    if (!r[valueKey]) return;
+    const opt = document.createElement("option");
+    opt.value = r[valueKey];
+    opt.textContent = r[labelKey] || r[valueKey];
+    el.appendChild(opt);
+  });
+}
+
+function fillLessons() {
+  const lesson = document.getElementById("memoryLesson");
+  lesson.innerHTML = `<option value="">Chọn bài học nếu nhớ</option>`;
+  (CONFIG.lessons || []).forEach(l => {
+    const opt = document.createElement("option");
+    opt.value = l.lesson_id;
+    opt.textContent = `${l.lesson_code || ""} — ${l.lesson_name || ""}`;
+    lesson.appendChild(opt);
+  });
+}
+
+function selectedTeacher() {
+  const id = document.getElementById("teacherSelect").value;
+  return (CONFIG.teachers || []).find(t => t.teacher_id === id) || {};
+}
+
+function selectedSchool() {
+  const id = document.getElementById("schoolSelect").value;
+  return (CONFIG.schools || []).find(s => s.school_id === id) || {};
+}
+
+function onTeacherChange() {}
+
+function onSchoolChange() {
+  const schoolId = document.getElementById("schoolSelect").value;
+  const classes = (CONFIG.classes || []).filter(c => c.school_id === schoolId);
+
+  const cp = document.getElementById("classPortfolioClass");
+  cp.innerHTML = `<option value="">Chọn lớp</option>`;
+  classes.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.class_id;
+    opt.textContent = c.class_name;
+    cp.appendChild(opt);
+  });
+
+  renderClassCheckboxes("eventClassList", classes);
+  renderClassCheckboxes("memoryClassList", classes);
+}
+
+function renderClassCheckboxes(containerId, classes) {
+  const box = document.getElementById(containerId);
+  box.innerHTML = "";
+  classes.forEach(c => {
+    const label = document.createElement("label");
+    label.className = "text-sm bg-white border border-gray-200 rounded-xl px-2 py-2 flex items-center gap-2";
+    label.innerHTML = `<input type="checkbox" value="${c.class_id}" data-name="${c.class_name}" class="class-check w-4 h-4" /> <span>${c.class_name}</span>`;
+    box.appendChild(label);
+  });
+}
+
+function getCheckedClasses(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} input[type=checkbox]:checked`)).map(x => ({
+    class_id: x.value,
+    class_name: x.dataset.name
+  }));
+}
+
+function switchTab(tab) {
+  CURRENT_TAB = tab;
+  ["class","event","story","memory"].forEach(t => {
+    document.getElementById("form-" + t).classList.toggle("hidden", t !== tab);
+    document.getElementById("tab-" + t).className = (t === tab ? "tab-active" : "tab-inactive") + " rounded-xl py-2 active-scale";
+  });
+}
+
+function commonData() {
+  const t = selectedTeacher();
+  const s = selectedSchool();
+  return {
+    teacher_id: t.teacher_id || "",
+    teacher_name: t.teacher_name || "",
+    person_id: t.teacher_id || "",
+    person_name: t.teacher_name || "",
+    school_id: s.school_id || "",
+    school_name: s.school_name || "",
+    leader_id: s.leader_id || t.leader_id || ""
+  };
+}
+
+async function post(action, data) {
+  if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_")) {
+    throw new Error("Chưa dán WEB_APP_URL trong file HTML.");
+  }
+  showLoading(true, "Đang gửi dữ liệu...");
+  const res = await fetch(WEB_APP_URL, {
+    method: "POST",
+    body: JSON.stringify({ action, data })
+  });
+  const out = await res.json();
+  showLoading(false);
+  if (out.status !== "success") throw new Error(out.message || "Gửi không thành công");
+  return out;
+}
+
+async function submitClassPortfolio(e) {
+  e.preventDefault();
+  try {
+    const clsId = document.getElementById("classPortfolioClass").value;
+    const cls = (CONFIG.classes || []).find(c => c.class_id === clsId) || {};
+    if (!clsId) throw new Error("Vui lòng chọn lớp.");
+    const data = {
+      ...commonData(),
+      class_id: cls.class_id,
+      class_name: cls.class_name,
+      class_video_link: val("classVideoLink"),
+      selected_asset_folder: val("classAssetFolder"),
+      top_3_moments: val("top3Moments"),
+      strongest_growth_signal: val("growthSignal"),
+      nominated_memorable_class: document.getElementById("nominateClass").checked,
+      media_support_needed: val("classNeedMedia"),
+      note: val("classNote")
+    };
+    await post("class_portfolio", data);
+    showMessage("Đã gửi hồ sơ lớp thành công.");
+    e.target.reset();
+  } catch (err) {
+    showLoading(false); showMessage(err.message, "err");
+  }
+}
+
+async function submitEventPortfolio(e) {
+  e.preventDefault();
+  try {
+    const classes = getCheckedClasses("eventClassList");
+    const data = {
+      ...commonData(),
+      event_type: val("eventType"),
+      event_level: val("eventLevel"),
+      event_date: val("eventDate"),
+      class_ids: classes.map(c => c.class_id).join(";"),
+      class_names: classes.map(c => c.class_name).join("; "),
+      event_video_link: val("eventVideoLink"),
+      recap_video_link: val("eventVideoLink"),
+      asset_folder: val("eventAssetFolder"),
+      highlight: val("eventHighlight"),
+      school_feedback: val("eventFeedback"),
+      media_support_needed: val("eventNeedMedia")
+    };
+    if (!data.event_type) throw new Error("Vui lòng chọn loại hoạt động.");
+    await post("event_portfolio", data);
+    showMessage("Đã gửi thông tin sự kiện thành công.");
+    e.target.reset();
+  } catch (err) {
+    showLoading(false); showMessage(err.message, "err");
+  }
+}
+
+async function submitPersonalStory(e) {
+  e.preventDefault();
+  try {
+    const data = {
+      ...commonData(),
+      role: val("storyRole"),
+      category: val("storyCategory"),
+      format: val("storyFormat"),
+      product_link: val("storyProductLink"),
+      evidence_links: val("storyEvidenceLink"),
+      summary_3_sentences: val("storySummary"),
+      self_recognition: val("storySelfRecognition")
+    };
+    if (!data.role || !data.category || !data.product_link) throw new Error("Vui lòng điền vai trò, hạng mục và link sản phẩm.");
+    await post("personal_story", data);
+    showMessage("Đã gửi chia sẻ hành trình cá nhân.");
+    e.target.reset();
+  } catch (err) {
+    showLoading(false); showMessage(err.message, "err");
+  }
+}
+
+async function submitMemoryCard(e) {
+  e.preventDefault();
+  try {
+    const classes = getCheckedClasses("memoryClassList");
+    const data = {
+      ...commonData(),
+      class_scope: classes.length > 1 ? "multi_class" : "class",
+      class_ids: classes.map(c => c.class_id).join(";"),
+      class_names: classes.map(c => c.class_name).join("; "),
+      lesson_id: val("memoryLesson"),
+      memory_title: val("memoryTitle"),
+      moment_description: val("memoryDescription"),
+      child_learning_signal: val("memorySignal"),
+      teacher_insight: val("memoryInsight"),
+      photo_links: val("memoryPhotoLinks"),
+      video_link: val("memoryVideoLink"),
+      selected_for_award: document.getElementById("nominateMoment").checked
+    };
+    if (!data.memory_title || !data.moment_description) throw new Error("Vui lòng nhập tiêu đề và mô tả khoảnh khắc.");
+    await post("memory_card", data);
+    showMessage("Đã gửi Thẻ ký ức lớp học.");
+    e.target.reset();
+  } catch (err) {
+    showLoading(false); showMessage(err.message, "err");
+  }
+}
+
+function val(id) {
+  return document.getElementById(id).value.trim();
+}
+</script>
+</body>
+</html>
