@@ -29,9 +29,10 @@
   // DÁN LINK WEB APP URL CỦA APPS SCRIPT V3 VÀO ĐÂY
   // Ví dụ: https://script.google.com/macros/s/xxx/exec
   // =========================================================
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw10ir7IsThcgNNRMU-cWH_6i1L-GK93JSGqyjt0jgWTWwScNlYlHOVXdK6nXaVfz9-UQ/exec";
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwrip9Wr5GgS8941Pur9DhJmYUodIjyNX3DJMmmz2Vx1I95xlDEfu2LKhDSTYxo9PNvmg/exec";
   const EVALUATION_APP_URL = "https://sunbotvietnam.github.io/report/";
-  const APP_VERSION = "teacher-report-v3-9-ultra-compact-2026-05";
+  const IMPACT_APP_URL = "https://sunbotvietnam.github.io/app/impact/";
+  const APP_VERSION = "teacher-report-v4-receipt-myreports-impact-2026-05";
   const MAX_IMAGE_PX = 900;
   const IMAGE_QUALITY = 0.62;
 
@@ -105,7 +106,10 @@
       highlight:"", needs_attention:"", teacher_comment:"", next_plan:"",
       memory_enabled:false, memory_title:"", memory_signal:"", memory_description:"", memory_photo_b64:""
     },
-    lastResult: null
+    lastResult: null,
+    lastReceipt: null,
+    showMyReports: false,
+    myReports: { teacher_id:"", pin:"", period:"today", loading:false, error:"", data:null }
   };
 
   const $ = (id) => document.getElementById(id);
@@ -229,11 +233,19 @@
       ${loadingNotices}
       ${configWarning}
       ${enrollmentWarning}
-      <div class="mx-4 mt-3">
-        <button id="btnEvaluation" class="w-full bg-gradient-to-r from-[#FF6B00] to-amber-400 text-white rounded-xl px-3 py-2.5 shadow-md active-scale flex items-center justify-between text-left">
-          <div class="flex items-center gap-2 min-w-0"><div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-clipboard-check text-[15px]"></i></div><div class="min-w-0"><div class="font-bold text-[14px] leading-tight">Đánh giá trẻ</div><div class="text-[11px] text-white/90 leading-tight truncate">Bổ sung đánh giá cá nhân khi cần</div></div></div><i class="fa-solid fa-chevron-right text-white/80 text-[12px]"></i>
+      <div class="mx-4 mt-3 grid grid-cols-3 gap-2">
+        <button id="btnImpact" class="h-11 bg-white border border-orange-100 text-orange-700 rounded-xl px-2 shadow-sm active-scale flex items-center justify-center gap-1.5 text-[12px] font-bold">
+          <i class="fa-solid fa-sun text-[13px]"></i><span>Hành trình</span>
+        </button>
+        <button id="btnEvaluation" class="h-11 bg-white border border-blue-100 text-blue-700 rounded-xl px-2 shadow-sm active-scale flex items-center justify-center gap-1.5 text-[12px] font-bold">
+          <i class="fa-solid fa-clipboard-check text-[13px]"></i><span>Đánh giá trẻ</span>
+        </button>
+        <button id="btnMyReports" class="h-11 bg-white border border-gray-200 text-gray-700 rounded-xl px-2 shadow-sm active-scale flex items-center justify-center gap-1.5 text-[12px] font-bold">
+          <i class="fa-solid fa-list-check text-[13px]"></i><span>Báo cáo của tôi</span>
         </button>
       </div>
+      ${renderMyReportsPanel()}
+      ${renderReceiptPanel()}
 
       <div class="mx-4 mt-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden p-2 space-y-2">
         <select id="teacher_id" class="w-full h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400 text-gray-900">${optionList(cfg.teachers.filter(t=>isTruthy(t.active)), 'teacher_id', t => t.teacher_name, d.teacher_id, 'Chọn giáo viên')}</select>
@@ -269,7 +281,6 @@
       ${d.report_type === 'REG' ? '' : renderChildSection(children)}
       ${d.report_type === 'REG' ? '' : renderCommentSection()}
       ${d.report_type === 'REG' ? renderRegularPhotos(4) : renderEndMonthPhotos(6)}
-      ${renderMemorySection(d.report_type === 'REG' ? 5 : 7)}
 
       <div class="px-4 pt-8 pb-20">
         <button id="submitBtn" class="w-full bg-[#FF6B00] text-white h-14 rounded-2xl font-bold text-[17px] active-scale shadow-xl shadow-orange-200/50 flex items-center justify-center gap-2"><i class="fa-solid fa-paper-plane"></i> GỬI BÁO CÁO</button>
@@ -341,9 +352,71 @@
     </div>`;
   }
 
-  function renderMemorySection(sectionNo){
-    const d=state.data;
-    return `${section(String(sectionNo || 7) + '. Thẻ ký ức lớp học', 'Tuỳ chọn, chỉ ghi khi có khoảnh khắc đáng nhớ')}${card(`<div class="p-4"><label class="flex items-center justify-between p-3 rounded-xl bg-orange-50 border border-orange-100"><span class="font-bold text-orange-800">Ca học này có khoảnh khắc đáng nhớ</span><input id="memory_enabled" type="checkbox" class="w-5 h-5" ${d.memory_enabled?'checked':''} /></label>${d.memory_enabled ? `<div class="mt-4 space-y-3 fade"><input id="memory_title" value="${esc(d.memory_title)}" class="w-full h-12 rounded-xl border border-gray-200 px-3" placeholder="Tiêu đề khoảnh khắc: Lần đầu nhóm tự chia vai" /><select id="memory_signal" class="w-full h-12 rounded-xl border border-gray-200 px-3"><option value="">Con đã thể hiện điều gì?</option>${CHILD_SIGNALS.map(x=>`<option value="${esc(x)}" ${d.memory_signal===x?'selected':''}>${esc(x)}</option>`).join('')}</select><textarea id="memory_description" class="w-full p-3 rounded-xl border border-gray-200 bg-gray-50" rows="3" placeholder="Kể ngắn khoảnh khắc này trong 2-3 câu...">${esc(d.memory_description)}</textarea>${photoBox('memory_photo_b64','Thêm ảnh khoảnh khắc (tuỳ chọn)', d.memory_photo_b64)}</div>` : ''}</div>`)}`;
+  function renderReceiptPanel(){
+    const r = state.lastReceipt;
+    if(!r) return '';
+    const classes = (r.classes || []).map(c => `${c.class_name}: ${c.attendance_count} trẻ`).join(' · ');
+    const photoText = r.attendance_photo_url ? 'Đã nhận ảnh sĩ số' : 'Chưa thấy ảnh sĩ số';
+    return `${section('Biên nhận vừa gửi')}
+      ${card(`<div class="p-4 space-y-3 bg-green-50/40">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-check"></i></div>
+          <div class="min-w-0 flex-1">
+            <div class="font-black text-green-800 text-[15px]">Đã ghi nhận báo cáo</div>
+            <div class="text-[12px] text-green-700 mt-0.5">Mã ca học: <b>${esc(r.session_id || '')}</b></div>
+          </div>
+        </div>
+        <div class="text-[13px] leading-relaxed text-gray-700 bg-white rounded-xl border border-green-100 p-3">
+          <div><b>${esc(r.school_name || '')}</b> · ${esc(r.session_date || '')}</div>
+          <div>${esc(classes)}</div>
+          <div>${esc(r.lesson_label || '')}</div>
+          <div>Tổng sĩ số: <b>${esc(r.total_attendance || 0)}</b> · ${esc(photoText)}</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnSendReceipt" class="h-10 rounded-xl bg-green-600 text-white text-[13px] font-bold active-scale"><i class="fa-solid fa-envelope mr-1"></i>Gửi email</button>
+          <button id="btnClearReceipt" class="h-10 rounded-xl bg-white border border-gray-200 text-gray-600 text-[13px] font-bold active-scale">Đóng</button>
+        </div>
+      </div>`)}
+    `;
+  }
+
+  function renderMyReportsPanel(){
+    if(!state.showMyReports) return '';
+    const mr = state.myReports;
+    const rows = (mr.data && mr.data.reports || []).map((r, i) => {
+      const cls = (r.classes || []).map(c => `${c.class_name}: ${c.attendance_count}`).join(' · ');
+      const status = r.has_attendance_photo ? 'Đủ ảnh' : 'Thiếu ảnh';
+      return `<div class="rounded-xl border border-gray-100 bg-white p-3">
+        <div class="flex justify-between gap-2 text-[12px] text-gray-500"><span>${esc(r.session_date || '')}</span><span>${esc(r.report_type || '')}</span></div>
+        <div class="font-bold text-[14px] text-gray-900 mt-1">${esc(r.school_name || r.school_id || '')}</div>
+        <div class="text-[13px] text-gray-700 mt-0.5">${esc(cls)}</div>
+        <div class="text-[13px] text-blue-700 mt-0.5">${esc(r.lesson_label || '')}</div>
+        <div class="mt-2 flex justify-between text-[12px]"><span>Tổng: <b>${esc(r.total_attendance || 0)}</b> trẻ</span><span class="${r.has_attendance_photo?'text-green-700':'text-red-600'} font-bold">${esc(status)}</span></div>
+      </div>`;
+    }).join('');
+    return `${section('Báo cáo của tôi', 'Nhập mã PIN cá nhân để xem báo cáo của chính mình')}
+      ${card(`<div class="p-3 space-y-3">
+        <select id="my_teacher_id" class="w-full h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">${optionList(state.config.teachers.filter(t=>isTruthy(t.active)), 'teacher_id', t => t.teacher_name, mr.teacher_id, 'Chọn giáo viên')}</select>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="my_pin" type="password" inputmode="numeric" value="${esc(mr.pin)}" class="w-full h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Mã PIN" />
+          <select id="my_period" class="w-full h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
+            <option value="today" ${mr.period==='today'?'selected':''}>Hôm nay</option>
+            <option value="week" ${mr.period==='week'?'selected':''}>Tuần này</option>
+            <option value="month" ${mr.period==='month'?'selected':''}>Tháng này</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnLoadMyReports" class="h-10 rounded-xl bg-gray-900 text-white text-[13px] font-bold active-scale">${mr.loading ? 'Đang tải...' : 'Xem báo cáo'}</button>
+          <button id="btnCloseMyReports" class="h-10 rounded-xl bg-white border border-gray-200 text-gray-600 text-[13px] font-bold active-scale">Đóng</button>
+        </div>
+        ${mr.error ? `<div class="p-2 rounded-lg bg-red-50 text-red-700 text-[12px]">${esc(mr.error)}</div>` : ''}
+        ${mr.data ? `<div class="rounded-xl bg-orange-50 border border-orange-100 p-3 text-[12px] text-orange-800">
+          <b>${esc(mr.data.teacher_name || '')}</b> · ${esc(mr.data.period_label || '')}<br>
+          ${esc(mr.data.session_count || 0)} ca · ${esc(mr.data.total_attendance || 0)} lượt trẻ
+        </div>` : ''}
+        <div class="space-y-2">${rows || (mr.data ? `<div class="text-sm text-gray-500 p-2">Không có báo cáo trong kỳ này.</div>` : '')}</div>
+      </div>`)}
+    `;
   }
 
   function childChip(id, type){ const c = state.config.enrollment.find(x => x.child_id === id) || {child_name:id, class_name:""}; const cls = type === 'outstanding' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-red-50 text-red-700 border-red-100'; return `<button class="child-chip px-3 py-1.5 rounded-full ${cls} border text-xs font-bold" data-type="${type}" data-id="${esc(id)}">${esc(c.child_name)} · ${esc(c.class_name)} ×</button>`; }
@@ -378,7 +451,16 @@
 
   function bindEvents(){
     const on = (id, ev, fn) => { const el=$(id); if(el) el.addEventListener(ev, fn); };
+    on('btnImpact','click',()=>{ window.location.href = IMPACT_APP_URL; });
     on('btnEvaluation','click',()=>{ window.location.href = EVALUATION_APP_URL; });
+    on('btnMyReports','click',()=>{ state.showMyReports = true; render(); });
+    on('btnCloseMyReports','click',()=>{ state.showMyReports = false; state.myReports.error=''; render(); });
+    on('btnLoadMyReports','click',loadMyReports);
+    on('my_teacher_id','change',e=>{ state.myReports.teacher_id=e.target.value; });
+    on('my_pin','input',e=>{ state.myReports.pin=e.target.value; });
+    on('my_period','change',e=>{ state.myReports.period=e.target.value; });
+    on('btnSendReceipt','click',sendReceiptEmail);
+    on('btnClearReceipt','click',()=>{ state.lastReceipt=null; render(); });
     on('teacher_id','change',e=>{ state.data.teacher_id=e.target.value; saveLocal(); render(); });
     on('school_id','change',e=>{ state.data.school_id=e.target.value; state.data.selected_classes=['']; state.data.class_attendance={}; state.data.outstanding_children=[]; state.data.attention_children=[]; saveLocal(); render(); });
     on('session_date','change',e=>{ state.data.session_date=e.target.value; saveLocal(); });
@@ -425,10 +507,6 @@
     document.querySelectorAll('.photo-input').forEach(el=>el.addEventListener('change', handlePhoto));
     document.querySelectorAll('.monthly-photo-input').forEach(el=>el.addEventListener('change', handleMonthlyPhoto));
     document.querySelectorAll('.monthly-photo-cat').forEach(el=>el.addEventListener('change',e=>{ const idx=Number(e.target.dataset.idx); state.data.monthly_photos[idx].cat=e.target.value; }));
-    on('memory_enabled','change',e=>{ state.data.memory_enabled=e.target.checked; render(); });
-    on('memory_title','input',e=>state.data.memory_title=e.target.value);
-    on('memory_signal','change',e=>state.data.memory_signal=e.target.value);
-    on('memory_description','input',e=>state.data.memory_description=e.target.value);
     on('submitBtn','click',submit);
     updateLessonDatalist();
     updateLessonStatus();
@@ -450,7 +528,6 @@
     for(const cid of ids){ const n=Number(d.class_attendance[cid]); const cname=classObj(cid).class_name || cid; if(!Number.isFinite(n)||n<=0) return `Vui lòng nhập sĩ số của lớp ${cname}.`; }
     if(d.report_type==='REG' && !d.attendance_photo_b64) return 'Vui lòng chụp/chọn ảnh minh chứng sĩ số hoặc lớp học.';
     if(d.report_type==='EOM' && d.monthly_photos.filter(x=>x.img).length===0) return 'Vui lòng bổ sung ít nhất 1 ảnh minh chứng cuối tháng.';
-    if(d.memory_enabled && (!norm(d.memory_title)||!norm(d.memory_signal)||!norm(d.memory_description))) return 'Thẻ ký ức đã bật. Vui lòng điền đủ tiêu đề, tín hiệu và mô tả.';
     return '';
   }
 
@@ -464,23 +541,73 @@
       lesson_id:d.lesson_id, lesson_code:l.lesson_code||'', lesson_name:l.lesson_name||'', report_type:d.report_type, session_type:d.report_type === 'EOM' ? 'END_OF_MONTH' : 'REGULAR',
       classes, total_attendance:totalAttendance(), checklist:CHECKLIST.map((x,i)=>({item:x,checked:!!d.checklist[i]})),
       criteria:CRITERIA.map((x,i)=>({item:x,value:d.criteria[i]})), incident_status:d.incident_status, incident_desc:d.incident_desc,
-      attendance_photo_b64:d.attendance_photo_b64, activity_photo_b64:"", memory_photo_b64:d.memory_photo_b64, monthly_photos:d.monthly_photos,
+      attendance_photo_b64:d.attendance_photo_b64, activity_photo_b64:"", memory_photo_b64:"", monthly_photos:d.monthly_photos,
       highlight:d.highlight, needs_attention:d.child_note_text || '', teacher_comment:d.teacher_comment, next_plan:d.next_plan,
       outstanding_children:d.outstanding_children.map(childObj), attention_children:d.attention_children.map(childObj),
-      memory:d.memory_enabled ? {title:d.memory_title, child_signal:d.memory_signal, description:d.memory_description} : null
+      memory:null
     };
+  }
+
+  function buildReceiptFromPayload(json){
+    const p = buildPayload();
+    const l = lesson();
+    return {
+      session_id: json.session_id || '',
+      report_id: json.report_id || '',
+      session_date: p.session_date,
+      teacher_id: p.teacher_id,
+      teacher_name: p.teacher_name,
+      school_id: p.school_id,
+      school_name: p.school_name,
+      lesson_label: `${p.lesson_code || ''}${p.lesson_name ? ' — ' + p.lesson_name : ''}`,
+      report_type: p.report_type,
+      classes: p.classes || [],
+      total_attendance: p.total_attendance || 0,
+      attendance_photo_url: json.attendance_photo_url || ''
+    };
+  }
+
+  async function sendReceiptEmail(){
+    if(!state.lastReceipt || !state.lastReceipt.session_id){ alert('Chưa có biên nhận để gửi.'); return; }
+    if(!WEB_APP_URL || WEB_APP_URL.includes('PASTE_GOOGLE_APPS_SCRIPT')){ alert('Chưa dán WEB_APP_URL.'); return; }
+    state.loading=true; render();
+    try{
+      const res = await fetch(WEB_APP_URL, {method:'POST', body:JSON.stringify({action:'send_teacher_receipt', session_id:state.lastReceipt.session_id})});
+      const json = await res.json();
+      if(json.status !== 'success') throw new Error(json.message || 'Không gửi được email.');
+      alert('Đã gửi biên nhận về email giáo viên.');
+    } catch(err){ alert('Lỗi gửi email: ' + (err.message || err)); }
+    finally{ state.loading=false; render(); }
+  }
+
+  async function loadMyReports(){
+    if(!state.myReports.teacher_id){ alert('Vui lòng chọn giáo viên.'); return; }
+    if(!state.myReports.pin){ alert('Vui lòng nhập mã PIN.'); return; }
+    state.myReports.loading=true; state.myReports.error=''; state.myReports.data=null; render();
+    try{
+      const res = await fetch(WEB_APP_URL, {method:'POST', body:JSON.stringify({action:'get_my_reports', teacher_id:state.myReports.teacher_id, teacher_pin:state.myReports.pin, period:state.myReports.period})});
+      const json = await res.json();
+      if(json.status !== 'success') throw new Error(json.message || 'Không tải được báo cáo.');
+      state.myReports.data = json;
+    } catch(err){ state.myReports.error = err.message || String(err); }
+    finally{ state.myReports.loading=false; render(); }
   }
 
   async function submit(){
     const msg=validate(); if(msg){ alert(msg); return; }
     if(!WEB_APP_URL || WEB_APP_URL.includes('PASTE_GOOGLE_APPS_SCRIPT')){ alert('Chưa dán WEB_APP_URL của Apps Script trong file HTML.'); return; }
     state.loading=true; render();
-    try { const res=await fetch(WEB_APP_URL,{method:'POST',body:JSON.stringify(buildPayload())}); const json=await res.json(); if(json.status!=='success') throw new Error(json.message||'Server không trả về success'); state.lastResult=json; resetAfterSubmit(); alert('🎉 Gửi báo cáo thành công!\nMã ca học: '+(json.session_id||'')); window.scrollTo(0,0); }
+    try { const res=await fetch(WEB_APP_URL,{method:'POST',body:JSON.stringify(buildPayload())}); const json=await res.json(); if(json.status!=='success') throw new Error(json.message||'Server không trả về success'); const receipt = buildReceiptFromPayload(json);
+      state.lastResult=json;
+      state.lastReceipt=receipt;
+      resetAfterSubmit();
+      alert('🎉 Gửi báo cáo thành công!\nMã ca học: '+(json.session_id||''));
+      window.scrollTo(0,0); }
     catch(err){ alert('❌ Lỗi gửi báo cáo: '+err.message); }
     finally{ state.loading=false; render(); }
   }
   function resetAfterSubmit(){
-    const d=state.data; d.selected_classes=['']; d.class_attendance={}; d.checklist=CHECKLIST.map(()=>false); d.incident_status='NO'; d.incident_desc=''; d.attendance_photo_b64=''; d.activity_photo_b64=''; d.criteria=CRITERIA.map(()=>"Đạt"); d.monthly_photos=Array(6).fill(0).map(()=>({cat:PHOTO_CATS[0],img:""})); d.outstanding_children=[]; d.attention_children=[]; d.child_note_text=''; d.highlight=''; d.needs_attention=''; d.teacher_comment=''; d.next_plan=''; d.memory_enabled=false; d.memory_title=''; d.memory_signal=''; d.memory_description=''; d.memory_photo_b64='';
+    const d=state.data; d.selected_classes=['']; d.class_attendance={}; d.checklist=CHECKLIST.map(()=>false); d.incident_status='NO'; d.incident_desc=''; d.attendance_photo_b64=''; d.activity_photo_b64=''; d.criteria=CRITERIA.map(()=>"Đạt"); d.monthly_photos=Array(6).fill(0).map(()=>({cat:PHOTO_CATS[0],img:""})); d.outstanding_children=[]; d.attention_children=[]; d.child_note_text=''; d.highlight=''; d.needs_attention=''; d.teacher_comment=''; d.next_plan='';
   }
 
   function selectedClassKey(){ return selectedClassIds().sort().join('|'); }
