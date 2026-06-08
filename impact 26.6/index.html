@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Sunbot Media Library Mode</title>
+  <style>
+    :root{
+      --orange:#f36f21; --orange-dark:#d95a12; --orange-soft:#fff3e8;
+      --blue:#42b8e8; --mint:#7bd852; --yellow:#ffd66b;
+      --ink:#17273a; --muted:#64748b; --line:#e5e7eb; --bg:#f6f7fb; --white:#fff;
+      --danger:#dc2626; --green:#15803d;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif}
+    input,select,textarea,button{font:inherit;font-size:16px}
+    button{cursor:pointer;border:0}
+    .app{max-width:980px;margin:0 auto;min-height:100vh;padding-bottom:80px}
+    .topbar{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid #fed7aa}
+    .topbar-inner{display:flex;align-items:center;gap:12px;padding:12px 16px}
+    .logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--orange),#ff9b3d);color:#fff;display:grid;place-items:center;font-weight:1000;box-shadow:0 10px 24px rgba(243,111,33,.25)}
+    .title{font-weight:900;line-height:1.15}.subtitle{font-size:12px;color:var(--muted);margin-top:2px}
+    .status{display:none;align-items:center;gap:8px;padding:0 16px 10px;color:#9a3412;font-size:12px;font-weight:700}
+    .status.show{display:flex}.loader{width:18px;height:18px;border:3px solid #fff3e8;border-top-color:var(--orange);border-radius:999px;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px;background:#fff}
+    .tab{height:42px;border-radius:14px;background:#f8fafc;color:#475569;font-weight:900;font-size:13px}.tab.active{background:var(--orange);color:#fff;box-shadow:0 10px 24px rgba(243,111,33,.22)}
+    .wrap{padding:16px;display:grid;gap:16px}
+    .card{background:#fff;border:1px solid #edf0f4;border-radius:22px;box-shadow:0 8px 24px rgba(15,23,42,.05);overflow:hidden}
+    .card-pad{padding:16px}.card-title{font-weight:950;font-size:18px;margin-bottom:4px}.card-sub{font-size:13px;line-height:1.45;color:var(--muted)}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    @media(max-width:720px){.grid-2,.grid-3{grid-template-columns:1fr}.tabs{grid-template-columns:repeat(2,1fr)}.app{max-width:100%}}
+    .field{margin-top:12px}.label{display:block;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.04em;color:#ea580c;margin:0 0 6px}
+    .input,.textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:14px;padding:11px 12px;outline:none;min-height:46px}.textarea{min-height:82px;resize:vertical;line-height:1.45}.input:focus,.textarea:focus{border-color:#fdba74;box-shadow:0 0 0 4px #ffedd5}
+    .hint{font-size:12px;color:var(--muted);line-height:1.4}.divider{height:1px;background:#eef2f7;margin:14px 0}
+    .pill-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.pill{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155;font-size:13px;font-weight:800}.pill input{width:16px;height:16px}
+    .dropzone{border:2px dashed #fdba74;background:#fff7ed;border-radius:22px;padding:22px;text-align:center;color:#9a3412}.dropzone.drag{background:#ffedd5;border-color:var(--orange)}.drop-title{font-weight:950}.drop-sub{font-size:13px;margin-top:6px;color:#9a3412}.file-hidden{display:none}
+    .btn{height:46px;border-radius:15px;padding:0 16px;font-weight:950;display:inline-flex;align-items:center;justify-content:center;gap:8px}.btn-primary{background:var(--orange);color:#fff}.btn-primary:hover{background:var(--orange-dark)}.btn-white{background:#fff;border:1px solid #fed7aa;color:#c2410c}.btn-muted{background:#f1f5f9;color:#334155}.btn-danger{background:#fee2e2;color:#b91c1c}.btn:disabled{opacity:.5;cursor:not-allowed}
+    .preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:12px;margin-top:12px}.media-card{border:1px solid #e5e7eb;border-radius:18px;background:#fff;overflow:hidden;position:relative}.thumb{height:116px;background:#f1f5f9;display:grid;place-items:center;overflow:hidden}.thumb img{width:100%;height:100%;object-fit:cover}.thumb .video{font-size:34px;color:var(--orange);font-weight:1000}.media-body{padding:10px}.media-name{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.media-meta{font-size:11px;color:var(--muted);margin-top:3px}.media-actions{display:flex;gap:6px;margin-top:8px}.small-btn{height:32px;border-radius:10px;font-size:12px;font-weight:900;padding:0 10px;background:#f8fafc;color:#334155;border:1px solid #e2e8f0}.badge{position:absolute;top:8px;left:8px;background:rgba(15,23,42,.72);color:#fff;border-radius:999px;padding:4px 7px;font-size:11px;font-weight:900}.badge.featured{background:rgba(243,111,33,.92)}
+    .message{display:none;padding:12px 14px;border-radius:14px;font-size:14px;line-height:1.4}.message.show{display:block}.ok{background:#ecfdf5;color:#166534;border:1px solid #bbf7d0}.err{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}.warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+    .table{width:100%;border-collapse:separate;border-spacing:0 8px}.table th{text-align:left;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.03em;padding:0 10px}.table td{background:#fff;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:12px 10px;font-size:14px}.table td:first-child{border-left:1px solid #e5e7eb;border-radius:14px 0 0 14px;font-weight:900}.table td:last-child{border-right:1px solid #e5e7eb;border-radius:0 14px 14px 0}.progress{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden}.bar{height:100%;background:linear-gradient(90deg,var(--orange),var(--mint));border-radius:999px}.metric{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:12px}.metric b{font-size:22px;color:var(--orange)}
+    .modal{position:fixed;inset:0;background:rgba(15,23,42,.52);display:none;align-items:flex-end;justify-content:center;z-index:60}.modal.show{display:flex}.modal-card{background:#fff;width:min(760px,100%);max-height:90vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px}.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.x{width:38px;height:38px;border-radius:12px;background:#f1f5f9;color:#334155;font-weight:1000}
+    .step{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:16px;background:#f8fafc;border:1px solid #e2e8f0}.step-no{width:26px;height:26px;border-radius:999px;background:var(--orange);color:#fff;display:grid;place-items:center;font-weight:1000;font-size:12px;flex:0 0 auto}.step b{display:block}.step span{display:block;color:var(--muted);font-size:12px;line-height:1.35;margin-top:2px}
+    .check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}.check-card{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;font-size:13px;font-weight:850}.check-card input{width:17px;height:17px}.class-help{font-size:12px;color:var(--muted);line-height:1.35;margin-top:6px}
+    .card-check{position:absolute;top:8px;right:8px;z-index:5;width:24px;height:24px;accent-color:var(--orange)}.bulkbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding:10px;border:1px solid #e5e7eb;border-radius:16px;background:#f8fafc}.bulkbar .count{font-size:13px;font-weight:900;color:#334155;margin-right:auto}
+    .full-preview{width:100%;max-height:72vh;object-fit:contain;background:#0f172a;border-radius:16px}.edit-preview{height:300px;background:#f1f5f9;border:1px solid #e5e7eb;border-radius:18px;display:grid;place-items:center;overflow:hidden;margin-bottom:12px}.edit-preview img{width:100%;height:100%;object-fit:contain}.edit-preview video{width:100%;height:100%;object-fit:contain}.modal-card.wide{width:min(980px,100%)}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="logo">S</div>
+      <div style="flex:1;min-width:0">
+        <div class="title">Sunbot Impact Memory System</div>
+        <div class="subtitle">Media Library Mode · Upload, phân loại và chuẩn hóa tư liệu Dấu Ấn Sunbot</div>
+      </div>
+      <button class="btn btn-white" onclick="openSettings()">Cấu hình</button>
+    </div>
+    <div id="loadStatus" class="status"><span class="loader"></span><span>Đang xử lý...</span></div>
+    <nav class="tabs">
+      <button id="tab-upload" class="tab active" onclick="switchTab('upload')">1. Nhập nhanh</button>
+      <button id="tab-curate" class="tab" onclick="switchTab('curate')">2. Phân loại</button>
+      <button id="tab-dashboard" class="tab" onclick="switchTab('dashboard')">3. Tiến độ</button>
+      <button id="tab-selection" class="tab" onclick="switchTab('selection')">4. Chọn xuất bản</button>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <div id="message" class="message"></div>
+
+    <section id="view-upload">
+      <div class="card"><div class="card-pad">
+        <div class="card-title">Nhập nhanh tư liệu theo lô</div>
+        <div class="card-sub">Dùng cho đợt gấp cuối năm: chọn trường, phạm vi, nhóm ảnh chính rồi upload hàng loạt. Sau upload có thể chỉnh từng ảnh ở tab Phân loại.</div>
+        <div class="divider"></div>
+        <div class="grid-3">
+          <div class="field"><label class="label">Năm học</label><select id="yearId" class="input"></select></div>
+          <div class="field"><label class="label">Người nhập</label><select id="uploaderSelect" class="input"></select></div>
+          <div class="field"><label class="label">Trường</label><select id="schoolSelect" class="input" onchange="onSchoolChange()"></select></div>
+        </div>
+        <div class="grid-3">
+          <div class="field"><label class="label">Phạm vi</label><select id="scopeSelect" class="input" onchange="onScopeChange()">
+            <option value="school">Cấp trường</option><option value="class">Cấp lớp</option><option value="unknown">Chưa xác định lớp</option>
+          </select></div>
+          <div class="field"><label class="label">Lớp chính nếu biết</label><select id="classSelect" class="input" onchange="syncPrimaryClassCheck()"></select><div class="hint">Dùng cho ảnh thuộc một lớp chính. Ảnh lớp ghép chọn thêm các lớp bên dưới.</div></div>
+          <div class="field"><label class="label">Mã/lô nguồn</label><input id="sourceBatch" class="input" placeholder="VD: Folder Quỳnh Mai đẹp nhất" /></div>
+        </div>
+        <div id="classMultiWrap" class="field" style="display:none"><label class="label">Các lớp liên quan nếu là lớp ghép</label><div id="uploadClassChecks" class="check-grid"></div><div class="class-help">Có thể chọn nhiều lớp. Ảnh sẽ được dùng cho tất cả lớp được chọn, đồng thời vẫn tổng hợp được cho quyển trường.</div></div>
+        <div class="field"><label class="label">Bộ ảnh này chủ yếu thuộc nhóm nào?</label><select id="primaryCategory" class="input">
+          <option value="cover_candidate">Ảnh bìa / ảnh đẹp nhất</option>
+          <option value="bgh_school">Ban Giám Hiệu / nhà trường đồng hành</option>
+          <option value="learning_activity">Hoạt động học tập</option>
+          <option value="golden_moment">Khoảnh khắc đáng nhớ</option>
+          <option value="product_invention">Sản phẩm / phát minh của trẻ</option>
+          <option value="event_sunbot_day">Sự kiện / Sunbot Day / Festival</option>
+          <option value="teacher_companion">Giáo viên / người đồng hành</option>
+          <option value="backup_beautiful">Ảnh đẹp dự phòng</option>
+          <option value="unknown">Chưa rõ, để phân loại sau</option>
+        </select></div>
+        <div class="grid-2">
+          <div class="field"><label class="label">Dùng ưu tiên cho</label><div id="usageBox" class="pill-row"></div></div>
+          <div class="field"><label class="label">Chất lượng mặc định</label><select id="qualityDefault" class="input"><option value="3">3 - Dùng được</option><option value="4">4 - Đẹp</option><option value="5">5 - Rất đẹp / ứng viên bìa</option><option value="2">2 - Cần cân nhắc</option><option value="1">1 - Chỉ lưu tham khảo</option></select></div>
+        </div>
+        <div class="field"><label class="label">Trạng thái sử dụng hình ảnh</label><select id="consentStatus" class="input"><option value="school_report">Dùng cho báo cáo / Dấu Ấn gửi nhà trường</option><option value="internal_only">Chỉ dùng nội bộ</option><option value="public_candidate">Có thể dùng truyền thông nếu được duyệt</option></select></div>
+        <div class="field"><label class="label">Ghi chú lô ảnh</label><textarea id="batchNote" class="textarea" placeholder="VD: Ảnh đã được giáo viên chọn là đẹp nhất, chưa phân loại lớp..."></textarea></div>
+      </div></div>
+
+      <div class="card"><div class="card-pad">
+        <div id="dropzone" class="dropzone" onclick="document.getElementById('fileInput').click()">
+          <div class="drop-title">Kéo thả ảnh/video vào đây hoặc bấm để chọn file</div>
+          <div class="drop-sub">Có thể chọn nhiều file. Ảnh sẽ được nén/resize trước khi gửi để nhẹ Drive và dễ xuất PDF.</div>
+          <input id="fileInput" class="file-hidden" type="file" accept="image/*,video/*" multiple onchange="onFilesPicked(this.files)" />
+        </div>
+        <div class="grid-2" style="margin-top:12px">
+          <button class="btn btn-muted" onclick="clearPending()">Xóa danh sách chờ</button>
+          <button id="uploadBtn" class="btn btn-primary" onclick="uploadBatch()" disabled>Upload & lưu vào thư viện</button>
+        </div>
+        <div id="pendingSummary" class="hint" style="margin-top:10px">Chưa chọn file.</div>
+        <div id="pendingGrid" class="preview-grid"></div>
+      </div></div>
+    </section>
+
+    <section id="view-curate" style="display:none">
+      <div class="card"><div class="card-pad">
+        <div class="card-title">Phân loại tư liệu</div>
+        <div class="card-sub">Lọc ảnh đã upload trong phiên này hoặc tải từ backend để gắn lớp, tag, mục đích sử dụng, chất lượng và trạng thái nổi bật.</div>
+        <div class="grid-3">
+          <div class="field"><label class="label">Lọc trường</label><select id="filterSchool" class="input" onchange="renderLibrary()"></select></div>
+          <div class="field"><label class="label">Lọc lớp</label><select id="filterClass" class="input" onchange="renderLibrary()"></select></div>
+          <div class="field"><label class="label">Lọc nhóm ảnh</label><select id="filterCategory" class="input" onchange="renderLibrary()"><option value="">Tất cả</option></select></div>
+        </div>
+        <div class="grid-2" style="margin-top:12px">
+          <button class="btn btn-muted" onclick="loadLibraryFromBackend()">Tải thư viện từ backend</button>
+          <button class="btn btn-white" onclick="showUnclassifiedOnly()">Chỉ xem ảnh chưa phân loại</button>
+        </div>
+        <div class="bulkbar">
+          <span id="selectedCount" class="count">Chưa chọn ảnh nào.</span>
+          <button class="small-btn" onclick="selectVisibleAssets(true)">Chọn tất cả đang hiển thị</button>
+          <button class="small-btn" onclick="selectVisibleAssets(false)">Bỏ chọn</button>
+          <button class="small-btn" onclick="openBulkEdit()">Phân loại hàng loạt</button>
+        </div>
+        <div id="librarySummary" class="hint" style="margin-top:10px">Chưa có tư liệu trong phiên này.</div>
+        <div id="libraryGrid" class="preview-grid"></div>
+      </div></div>
+    </section>
+
+    <section id="view-dashboard" style="display:none">
+      <div class="card"><div class="card-pad">
+        <div class="card-title">Tiến độ đủ dữ liệu</div>
+        <div class="card-sub">Theo dõi mức độ sẵn sàng cho Quyển Dấu Ấn Trường và dữ liệu có thể dùng cho Dấu Ấn Lớp sau này.</div>
+        <div class="grid-3" style="margin-top:12px">
+          <div class="metric"><span>Tổng tư liệu</span><b id="mTotal">0</b></div>
+          <div class="metric"><span>Dùng cho quyển trường</span><b id="mSchoolBook">0</b></div>
+          <div class="metric"><span>Dùng cho quyển lớp</span><b id="mClassBook">0</b></div>
+        </div>
+        <div style="overflow:auto;margin-top:14px"><table class="table" id="readinessTable"></table></div>
+        <div class="grid-2" style="margin-top:12px">
+          <button class="btn btn-muted" onclick="refreshDashboard()">Cập nhật dashboard</button>
+          <button class="btn btn-white" onclick="exportSessionJson()">Xuất JSON phiên hiện tại</button>
+        </div>
+      </div></div>
+    </section>
+
+    <section id="view-selection" style="display:none">
+      <div class="card"><div class="card-pad">
+        <div class="card-title">Chọn ảnh xuất bản</div>
+        <div class="card-sub">Gắn ảnh vào vai trò nội dung của quyển. Không khóa cứng vào thiết kế, nhưng đủ để engine xuất HTML/PDF/PPT đọc đúng nguồn.</div>
+        <div class="grid-3">
+          <div class="field"><label class="label">Đầu ra</label><select id="outputType" class="input" onchange="renderSelectionBoard()"><option value="school_book">Quyển Dấu Ấn Trường</option><option value="class_book">Quyển Dấu Ấn Lớp</option><option value="proposal">Proposal/Sales</option><option value="social">Social Media</option></select></div>
+          <div class="field"><label class="label">Trường</label><select id="selectionSchool" class="input" onchange="renderSelectionBoard()"></select></div>
+          <div class="field"><label class="label">Lớp nếu là quyển lớp</label><select id="selectionClass" class="input" onchange="renderSelectionBoard()"></select></div>
+        </div>
+        <div style="overflow:auto;margin-top:14px"><table class="table" id="selectionTable"></table></div>
+        <div class="hint">Ảnh đã được đánh dấu featured hoặc quality 4-5 sẽ được ưu tiên. Sau này backend có thể tạo YEARBOOK_SELECTION từ bảng này.</div>
+      </div></div>
+    </section>
+  </main>
+</div>
+
+<div id="editModal" class="modal">
+  <div class="modal-card wide">
+    <div class="modal-head"><div><div class="card-title">Chỉnh metadata tư liệu</div><div id="editSub" class="card-sub"></div></div><button class="x" onclick="closeEdit()">×</button></div>
+    <div id="editPreview" class="edit-preview"><span class="hint">Preview</span></div>
+    <div class="grid-2">
+      <div class="field"><label class="label">Trường</label><select id="editSchool" class="input" onchange="onEditSchoolChange()"></select></div>
+      <div class="field"><label class="label">Lớp chính</label><select id="editClass" class="input" onchange="syncEditPrimaryClassCheck()"></select><div class="hint">Nếu ảnh thuộc lớp ghép, chọn thêm các lớp liên quan bên dưới.</div></div>
+    </div>
+    <div class="field"><label class="label">Các lớp liên quan</label><div id="editClassChecks" class="check-grid"></div></div>
+    <div class="grid-2">
+      <div class="field"><label class="label">Phạm vi</label><select id="editScope" class="input"><option value="school">Cấp trường</option><option value="class">Cấp lớp</option><option value="unknown">Chưa xác định lớp</option></select></div>
+      <div class="field"><label class="label">Nhóm ảnh chính</label><select id="editCategory" class="input"></select></div>
+    </div>
+    <div class="field"><label class="label">Tag nội dung</label><div id="editTags" class="pill-row"></div></div>
+    <div class="field"><label class="label">Dùng cho</label><div id="editUsages" class="pill-row"></div></div>
+    <div class="grid-2">
+      <div class="field"><label class="label">Chất lượng</label><select id="editQuality" class="input"><option value="1">1 - Chỉ lưu</option><option value="2">2 - Cần cân nhắc</option><option value="3">3 - Dùng được</option><option value="4">4 - Đẹp</option><option value="5">5 - Rất đẹp / ứng viên bìa</option></select></div>
+      <div class="field"><label class="label">Nổi bật</label><select id="editFeatured" class="input"><option value="no">Không</option><option value="yes">Có</option></select></div>
+    </div>
+    <div class="field"><label class="label">Caption / ghi chú</label><textarea id="editNote" class="textarea"></textarea></div>
+    <div class="grid-2" style="margin-top:14px"><button class="btn btn-muted" onclick="closeEdit()">Hủy</button><button class="btn btn-primary" onclick="saveEdit()">Lưu metadata</button></div>
+  </div>
+</div>
+
+<div id="previewModal" class="modal">
+  <div class="modal-card wide">
+    <div class="modal-head"><div><div class="card-title">Xem ảnh/video</div><div id="previewSub" class="card-sub"></div></div><button class="x" onclick="closePreview()">×</button></div>
+    <div id="previewBody"></div>
+  </div>
+</div>
+
+<div id="bulkModal" class="modal">
+  <div class="modal-card wide">
+    <div class="modal-head"><div><div class="card-title">Phân loại hàng loạt</div><div id="bulkSub" class="card-sub"></div></div><button class="x" onclick="closeBulkEdit()">×</button></div>
+    <div class="grid-2">
+      <div class="field"><label class="label">Trường</label><select id="bulkSchool" class="input" onchange="onBulkSchoolChange()"></select></div>
+      <div class="field"><label class="label">Phạm vi</label><select id="bulkScope" class="input"><option value="">Giữ nguyên</option><option value="school">Cấp trường</option><option value="class">Cấp lớp</option><option value="unknown">Chưa xác định lớp</option></select></div>
+    </div>
+    <div class="field"><label class="label">Các lớp liên quan</label><div id="bulkClassChecks" class="check-grid"></div><div class="class-help">Để trống nếu không muốn thay đổi lớp. Chọn nhiều lớp cho ảnh lớp ghép.</div></div>
+    <div class="grid-2">
+      <div class="field"><label class="label">Nhóm ảnh chính</label><select id="bulkCategory" class="input"><option value="">Giữ nguyên</option></select></div>
+      <div class="field"><label class="label">Chất lượng</label><select id="bulkQuality" class="input"><option value="">Giữ nguyên</option><option value="1">1 - Chỉ lưu</option><option value="2">2 - Cần cân nhắc</option><option value="3">3 - Dùng được</option><option value="4">4 - Đẹp</option><option value="5">5 - Rất đẹp / ứng viên bìa</option></select></div>
+    </div>
+    <div class="field"><label class="label">Tag nội dung áp dụng</label><div id="bulkTags" class="pill-row"></div></div>
+    <div class="field"><label class="label">Dùng cho</label><div id="bulkUsages" class="pill-row"></div></div>
+    <div class="grid-2">
+      <div class="field"><label class="label">Nổi bật</label><select id="bulkFeatured" class="input"><option value="">Giữ nguyên</option><option value="yes">Có</option><option value="no">Không</option></select></div>
+      <div class="field"><label class="label">Ghi chú</label><input id="bulkNote" class="input" placeholder="Để trống nếu không thay đổi" /></div>
+    </div>
+    <div class="grid-2" style="margin-top:14px"><button class="btn btn-muted" onclick="closeBulkEdit()">Hủy</button><button class="btn btn-primary" onclick="applyBulkEdit()">Áp dụng cho ảnh đã chọn</button></div>
+  </div>
+</div>
+
+<div id="settingsModal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head"><div><div class="card-title">Cấu hình backend</div><div class="card-sub">Dán URL Apps Script Web App để lưu Drive, resize server và đồng bộ Sheet.</div></div><button class="x" onclick="closeSettings()">×</button></div>
+    <div class="field"><label class="label">WEB_APP_URL</label><input id="webAppUrlInput" class="input" placeholder="https://script.google.com/macros/s/.../exec" /></div>
+    <div class="divider"></div>
+    <div class="step"><div class="step-no">1</div><div><b>Frontend gửi action</b><span>media_library_config, media_library_batch_upload, media_library_update_asset, media_library_dashboard, media_library_list_assets.</span></div></div>
+    <div class="step" style="margin-top:8px"><div class="step-no">2</div><div><b>Backend cần lưu Drive và Sheet</b><span>Ảnh đã nén client-side nhưng backend vẫn nên lưu bản chuẩn, thumbnail, metadata.</span></div></div>
+    <div class="grid-2" style="margin-top:14px"><button class="btn btn-muted" onclick="useDemoConfig()">Dùng demo config</button><button class="btn btn-primary" onclick="saveSettings()">Lưu cấu hình</button></div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_CATEGORIES = [
+  {id:"cover_candidate", label:"Ảnh bìa / ảnh đẹp nhất", required_school:1},
+  {id:"bgh_school", label:"Ban Giám Hiệu / nhà trường", required_school:2},
+  {id:"learning_activity", label:"Hoạt động học tập", required_school:10},
+  {id:"golden_moment", label:"Khoảnh khắc đáng nhớ", required_school:10},
+  {id:"product_invention", label:"Sản phẩm / phát minh", required_school:8},
+  {id:"event_sunbot_day", label:"Sự kiện / Sunbot Day / Festival", required_school:5},
+  {id:"teacher_companion", label:"Giáo viên / người đồng hành", required_school:2},
+  {id:"backup_beautiful", label:"Ảnh đẹp dự phòng", required_school:10},
+  {id:"unknown", label:"Chưa phân loại", required_school:0}
+];
+const CONTENT_TAGS = ["robot","activity","product","group","child_smile","child_focus","presentation","teacher","bgh","event","festival","sunbot_day","steam_output","golden_moment","cover_candidate","sales_candidate"];
+const USAGE_TAGS = [
+  {id:"school_book", label:"Quyển trường"},
+  {id:"class_book", label:"Quyển lớp"},
+  {id:"sales", label:"Proposal/Sales"},
+  {id:"social", label:"Social"},
+  {id:"internal_report", label:"Báo cáo nội bộ"}
+];
+const SELECTION_REQUIREMENTS = {
+  school_book:[
+    ["cover_school","Ảnh bìa trường",1,"cover_candidate"],
+    ["bgh_companion","BGH / nhà trường đồng hành",2,"bgh_school"],
+    ["learning_journey","Hoạt động học tập",10,"learning_activity"],
+    ["golden_moment","Khoảnh khắc đáng nhớ",10,"golden_moment"],
+    ["first_invention","Sản phẩm / phát minh",8,"product_invention"],
+    ["event","Sự kiện / Sunbot Day",5,"event_sunbot_day"],
+    ["teacher_companion","Người đồng hành",2,"teacher_companion"]
+  ],
+  class_book:[
+    ["cover","Ảnh bìa lớp",1,"cover_candidate"],
+    ["class_portrait","Chân dung lớp",1,"learning_activity"],
+    ["learning_journey","Hành trình học tập",3,"learning_activity"],
+    ["golden_moment","Khoảnh khắc vàng",4,"golden_moment"],
+    ["first_invention","Sản phẩm đầu tiên",2,"product_invention"],
+    ["teacher_companion","Người đồng hành",1,"teacher_companion"]
+  ],
+  proposal:[
+    ["hero","Ảnh hero",1,"cover_candidate"],
+    ["proof","Minh chứng triển khai",8,"learning_activity"],
+    ["product","Sản phẩm",4,"product_invention"],
+    ["event","Sự kiện",3,"event_sunbot_day"]
+  ],
+  social:[
+    ["post_candidate","Ảnh truyền thông",10,"backup_beautiful"],
+    ["emotion","Cảm xúc trẻ",5,"golden_moment"],
+    ["product","Sản phẩm",5,"product_invention"]
+  ]
+};
+let WEB_APP_URL = localStorage.getItem("sunbot_media_web_app_url") || "";
+let CONFIG = {years:[{year_id:"2526",year_name:"2025-2026"}],schools:[],classes:[],teachers:[]};
+let PENDING = [];
+let LIBRARY = [];
+let CURRENT_EDIT_ID = null;
+let FILTER_UNCLASSIFIED = false;
+let SELECTED_IDS = new Set();
+let VISIBLE_IDS = [];
+
+window.addEventListener("load", init);
+["dragenter","dragover"].forEach(evt=>document.getElementById("dropzone").addEventListener(evt,e=>{e.preventDefault();e.currentTarget.classList.add("drag")}));
+["dragleave","drop"].forEach(evt=>document.getElementById("dropzone").addEventListener(evt,e=>{e.preventDefault();e.currentTarget.classList.remove("drag")}));
+document.getElementById("dropzone").addEventListener("drop",e=>onFilesPicked(e.dataTransfer.files));
+
+async function init(){
+  document.getElementById("webAppUrlInput").value = WEB_APP_URL;
+  renderStaticOptions();
+  if(WEB_APP_URL){
+    try{showLoading(true,"Đang tải cấu hình..."); await loadConfig();}
+    catch(err){showMessage("Không tải được backend. Đang dùng demo config: "+err.message,"warn"); useDemoConfig(false);}
+    finally{showLoading(false)}
+  }else useDemoConfig(false);
+}
+function renderStaticOptions(){
+  fillSelect("primaryCategory", DEFAULT_CATEGORIES, "id", "label");
+  fillSelect("filterCategory", [{id:"",label:"Tất cả"},...DEFAULT_CATEGORIES], "id", "label");
+  fillSelect("editCategory", DEFAULT_CATEGORIES, "id", "label");
+  renderChecks("usageBox", USAGE_TAGS, ["school_book","class_book"]);
+  renderChecks("editTags", CONTENT_TAGS.map(x=>({id:x,label:x})), []);
+  renderChecks("editUsages", USAGE_TAGS, []);
+  fillSelect("bulkCategory", [{id:"",label:"Giữ nguyên"},...DEFAULT_CATEGORIES], "id", "label");
+  renderChecks("bulkTags", CONTENT_TAGS.map(x=>({id:x,label:x})), []);
+  renderChecks("bulkUsages", USAGE_TAGS, []);
+}
+async function loadConfig(){
+  const out = await post("media_library_config",{});
+  CONFIG = {...CONFIG,...out};
+  renderConfig();
+}
+function useDemoConfig(show=true){
+  CONFIG = {
+    years:[{year_id:"2526",year_name:"2025-2026"},{year_id:"2627",year_name:"2026-2027"}],
+    schools:[{school_id:"HN-QM",school_name:"Mầm non Quỳnh Mai"},{school_id:"HN-SH",school_name:"Sen Hồng"},{school_id:"NA-DEMO",school_name:"Trường Nghệ An Demo"}],
+    classes:[{class_id:"QM-A1",school_id:"HN-QM",class_name:"A1"},{class_id:"QM-A2",school_id:"HN-QM",class_name:"A2"},{class_id:"QM-B1",school_id:"HN-QM",class_name:"B1"},{class_id:"SH-A1",school_id:"HN-SH",class_name:"A1"}],
+    teachers:[{teacher_id:"MEDIA",teacher_name:"Media Kiro"},{teacher_id:"LEADER",teacher_name:"Leader chuyên môn"},{teacher_id:"VAN",teacher_name:"Ms. Vân"}]
+  };
+  renderConfig(); if(show) closeSettings();
+}
+function renderConfig(){
+  fillSelect("yearId", CONFIG.years||[], "year_id", "year_name", "Chọn năm học");
+  fillSelect("uploaderSelect", CONFIG.teachers||[], "teacher_id", "teacher_name", "Chọn người nhập");
+  ["schoolSelect","filterSchool","selectionSchool","editSchool","bulkSchool"].forEach(id=>fillSelect(id, [{school_id:"",school_name:id.includes("filter")||id.includes("selection")?"Tất cả/Chọn trường":"Chọn trường"},...(CONFIG.schools||[])], "school_id", "school_name"));
+  onSchoolChange(); renderFilterClasses(); renderSelectionClasses(); onEditSchoolChange(); refreshDashboard(); renderSelectionBoard();
+}
+function fillSelect(id, rows, valueKey, labelKey, placeholder){
+  const el=document.getElementById(id); if(!el) return; el.innerHTML="";
+  if(placeholder) el.appendChild(new Option(placeholder,""));
+  rows.forEach(r=>{ if(r[valueKey]!==undefined) el.appendChild(new Option(r[labelKey]||r[valueKey], r[valueKey])); });
+}
+function renderChecks(id, items, checked){
+  const box=document.getElementById(id); box.innerHTML="";
+  items.forEach(item=>{ const label=document.createElement("label"); label.className="pill"; label.innerHTML=`<input type="checkbox" value="${escapeHtml(item.id)}" ${checked.includes(item.id)?"checked":""}> <span>${escapeHtml(item.label)}</span>`; box.appendChild(label); });
+}
+function getChecks(id){ return Array.from(document.querySelectorAll(`#${id} input:checked`)).map(x=>x.value); }
+function setChecks(id, values){ Array.from(document.querySelectorAll(`#${id} input`)).forEach(x=>x.checked=(values||[]).includes(x.value)); }
+function onSchoolChange(){
+  const schoolId=val("schoolSelect"); const rows=(CONFIG.classes||[]).filter(c=>c.school_id===schoolId);
+  fillSelect("classSelect", rows, "class_id", "class_name", "Chọn lớp chính");
+  renderClassChecks("uploadClassChecks", rows, []);
+  onScopeChange();
+}
+function onScopeChange(){
+  const need=val("scopeSelect")==="class";
+  document.getElementById("classSelect").disabled=!need;
+  document.getElementById("classMultiWrap").style.display=need?"block":"none";
+  if(!need){ document.getElementById("classSelect").value=""; renderClassChecks("uploadClassChecks", [], []); }
+  else { const schoolId=val("schoolSelect"); renderClassChecks("uploadClassChecks", (CONFIG.classes||[]).filter(c=>c.school_id===schoolId), getSelectedClassIds("uploadClassChecks")); }
+}
+function renderClassChecks(containerId, rows, selectedIds){
+  const box=document.getElementById(containerId); if(!box) return;
+  const selected=new Set(selectedIds||[]);
+  box.innerHTML=(rows||[]).map(c=>`<label class="check-card"><input type="checkbox" value="${escapeHtml(c.class_id)}" ${selected.has(c.class_id)?"checked":""}> <span>${escapeHtml(c.class_name||c.class_id)}</span></label>`).join("") || `<div class="hint">Chưa có lớp phù hợp.</div>`;
+}
+function getSelectedClassIds(containerId){ return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(x=>x.value); }
+function syncPrimaryClassCheck(){ const id=val("classSelect"); if(!id) return; const input=document.querySelector(`#uploadClassChecks input[value="${cssEscape(id)}"]`); if(input) input.checked=true; }
+function syncEditPrimaryClassCheck(){ const id=val("editClass"); if(!id) return; const input=document.querySelector(`#editClassChecks input[value="${cssEscape(id)}"]`); if(input) input.checked=true; }
+function cssEscape(v){ return (window.CSS && CSS.escape) ? CSS.escape(String(v)) : String(v).replace(/[^a-zA-Z0-9_-]/g,"\\$&"); }
+function classNamesFromIds(ids){ return (ids||[]).map(id=>(selected(CONFIG.classes,"class_id",id).class_name||id)).filter(Boolean); }
+function renderFilterClasses(){
+  const schoolId=val("filterSchool"); const rows=(CONFIG.classes||[]).filter(c=>!schoolId||c.school_id===schoolId);
+  fillSelect("filterClass", [{class_id:"",class_name:"Tất cả lớp"},...rows], "class_id", "class_name");
+}
+function renderSelectionClasses(){
+  const schoolId=val("selectionSchool"); const rows=(CONFIG.classes||[]).filter(c=>!schoolId||c.school_id===schoolId);
+  fillSelect("selectionClass", [{class_id:"",class_name:"Tất cả lớp"},...rows], "class_id", "class_name");
+}
+function onEditSchoolChange(){ const schoolId=val("editSchool"); const rows=(CONFIG.classes||[]).filter(c=>!schoolId||c.school_id===schoolId); fillSelect("editClass", [{class_id:"",class_name:"Không gắn lớp chính"},...rows], "class_id", "class_name"); renderClassChecks("editClassChecks", rows, []); }
+function onBulkSchoolChange(){ const schoolId=val("bulkSchool"); const rows=(CONFIG.classes||[]).filter(c=>!schoolId||c.school_id===schoolId); renderClassChecks("bulkClassChecks", rows, []); }
+
+async function onFilesPicked(fileList){
+  const files=Array.from(fileList||[]); if(!files.length) return;
+  showLoading(true,"Đang tạo preview...");
+  for(const file of files){
+    if(!file.type.startsWith("image/") && !file.type.startsWith("video/")) continue;
+    const item = await preparePendingItem(file);
+    PENDING.push(item);
+  }
+  showLoading(false); renderPending();
+}
+async function preparePendingItem(file){
+  const isImage=file.type.startsWith("image/");
+  let preview="", payloadFile=file, resized=false;
+  if(isImage){
+    const img = await readImage(file);
+    preview = await canvasDataUrl(img, 360, 260, .82);
+    const resizedBlob = await resizeImageBlob(img, 1920, 1920, .86, file.type.includes("png")?"image/png":"image/jpeg");
+    payloadFile = new File([resizedBlob], normalizeFileName(file.name), {type:resizedBlob.type});
+    resized = payloadFile.size < file.size;
+  }
+  return {local_id:uid("local"), file, payloadFile, preview, name:file.name, mime_type:file.type, size:file.size, upload_size:payloadFile.size, resized, status:"pending"};
+}
+function renderPending(){
+  document.getElementById("uploadBtn").disabled=!PENDING.length;
+  const mb=PENDING.reduce((s,x)=>s+x.upload_size,0)/1024/1024;
+  document.getElementById("pendingSummary").textContent=PENDING.length?`Đang chờ ${PENDING.length} file · dung lượng gửi khoảng ${mb.toFixed(1)}MB.`:"Chưa chọn file.";
+  document.getElementById("pendingGrid").innerHTML=PENDING.map(item=>mediaCardHtml(item,true)).join("");
+}
+function mediaCardHtml(item,pending=false){
+  const isVideo=String(item.mime_type).startsWith("video/");
+  const id=item.media_id||item.local_id;
+  const category=labelCategory(item.primary_category||val("primaryCategory")||"unknown");
+  const src=assetPreviewSrc(item);
+  const schoolLabel=displaySchoolName(item);
+  const classLabel=displayClassNames(item);
+  const checked=SELECTED_IDS.has(id)?"checked":"";
+  return `<div class="media-card">
+    ${pending?"":`<input class="card-check" type="checkbox" ${checked} onchange="toggleSelectAsset('${id}',this.checked)" onclick="event.stopPropagation()">`}
+    <div class="badge ${item.is_featured==='yes'?'featured':''}">${escapeHtml(category)}</div>
+    <div class="thumb" onclick="${pending?'':`openPreview('${id}')`}">${src?`<img src="${escapeHtml(src)}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'hint',textContent:'Không tải được preview'}))">`:isVideo?`<div class="video">▶</div>`:`<div class="hint">No preview</div>`}</div>
+    <div class="media-body"><div class="media-name">${escapeHtml(item.file_name_original||item.name||item.file_name||"Tư liệu")}</div><div class="media-meta">${escapeHtml(schoolLabel)} · ${escapeHtml(classLabel)} · ${((item.upload_size||item.size||0)/1024/1024).toFixed(1)}MB</div>
+    <div class="media-actions">${pending?`<button class="small-btn" onclick="removePending('${item.local_id}')">Bỏ</button>`:`<button class="small-btn" onclick="openPreview('${id}')">Xem</button><button class="small-btn" onclick="openEdit('${id}')">Sửa</button>`}</div></div></div>`;
+}
+
+function assetPreviewSrc(item){
+  return item.preview_data_url || item.preview || item.thumbnail_data_url || item.thumbnail_url_data || item.resized_data_url || directDriveImageUrl(item.thumbnail_url) || directDriveImageUrl(item.resized_url) || directDriveImageUrl(item.file_url) || "";
+}
+function directDriveImageUrl(url){
+  const text=String(url||"").trim();
+  if(!text) return "";
+  if(/^(data:|blob:)/i.test(text)) return text;
+  const m=text.match(/\/d\/([^/]+)/)||text.match(/[?&]id=([^&]+)/);
+  if(m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
+  if(/^https?:\/\//i.test(text)) return text;
+  return "";
+}
+function displaySchoolName(item){
+  if(item.school_name) return item.school_name;
+  const s=selected(CONFIG.schools,"school_id",item.school_id||"");
+  return s.school_name || item.school_id || "Chưa gắn trường";
+}
+function displayClassNames(item){
+  const names=normalizeArray(item.class_names);
+  if(names.length) return names.join(", ");
+  const ids=normalizeArray(item.class_ids);
+  if(ids.length) return classNamesFromIds(ids).join(", ");
+  if(item.class_name) return item.class_name;
+  if(item.scope==="school") return "Cấp trường";
+  if(item.scope==="unknown") return "Chưa gắn lớp";
+  return "Chưa gắn lớp";
+}
+function assetClassIds(item){
+  const ids=normalizeArray(item.class_ids);
+  if(ids.length) return ids;
+  return item.class_id ? [item.class_id] : [];
+}
+
+function removePending(id){PENDING=PENDING.filter(x=>x.local_id!==id);renderPending();}
+function clearPending(){PENDING=[];document.getElementById("fileInput").value="";renderPending();}
+async function uploadBatch(){
+  try{
+    validateBatchMeta(); showLoading(true,"Đang nén và upload tư liệu...");
+    const batchMeta = currentBatchMeta();
+    const files=[];
+    for(const item of PENDING){ const base64=await fileToBase64(item.payloadFile); files.push({...itemToMetadata(item,batchMeta), base64, file_name:normalizeFileName(item.name), mime_type:item.payloadFile.type||item.mime_type}); }
+    const out = WEB_APP_URL ? await post("media_library_batch_upload",{batch_meta:batchMeta,files}) : await demoUpload(files,batchMeta);
+    const assets = out.assets || out.items || files.map((f,i)=>({...f,media_id:uid("media"),file_url:"",thumbnail_url:f.preview||""}));
+    assets.forEach(a=>LIBRARY.unshift(a));
+    showMessage(`Đã lưu ${assets.length} tư liệu vào thư viện.`,"ok"); clearPending(); renderLibrary(); refreshDashboard(); switchTab("curate");
+  }catch(err){showMessage(err.message,"err")} finally{showLoading(false)}
+}
+function selectedUploadClassIds(){
+  let ids=getSelectedClassIds("uploadClassChecks");
+  const primary=val("classSelect");
+  if(primary && !ids.includes(primary)) ids.unshift(primary);
+  return [...new Set(ids)];
+}
+function validateBatchMeta(){ if(!val("yearId")) throw new Error("Vui lòng chọn năm học."); if(!val("schoolSelect")) throw new Error("Vui lòng chọn trường."); if(val("scopeSelect")==="class"&&!selectedUploadClassIds().length) throw new Error("Vui lòng chọn ít nhất một lớp khi phạm vi là cấp lớp. Với lớp ghép có thể chọn nhiều lớp."); if(!PENDING.length) throw new Error("Chưa có file nào để upload."); }
+function currentBatchMeta(){
+  const school=selected(CONFIG.schools,"school_id",val("schoolSelect")); const ids=selectedUploadClassIds(); const names=classNamesFromIds(ids); const cls=selected(CONFIG.classes,"class_id",ids[0]||""); const uploader=selected(CONFIG.teachers,"teacher_id",val("uploaderSelect"));
+  return {year_id:val("yearId"), school_id:school.school_id||"", school_name:school.school_name||"", scope:val("scopeSelect"), class_id:cls.class_id||"", class_name:cls.class_name||"", class_ids:ids, class_names:names, primary_category:val("primaryCategory"), usage_tags:getChecks("usageBox"), quality_rating:val("qualityDefault"), consent_status:val("consentStatus"), source_batch:val("sourceBatch"), batch_note:val("batchNote"), uploader_id:uploader.teacher_id||"", uploader_name:uploader.teacher_name||"", source:"media_upload"};
+}
+function itemToMetadata(item,batch){ return {...batch, media_id:item.media_id||"", file_name_original:item.name, file_type:item.mime_type.startsWith("video/")?"video":"image", mime_type:item.mime_type, size:item.size, upload_size:item.upload_size, media_tags:tagsForCategory(batch.primary_category), is_featured: batch.quality_rating>=4?"yes":"no", note:batch.batch_note, preview:item.preview}; }
+function tagsForCategory(cat){
+  const map={cover_candidate:["cover_candidate"],bgh_school:["bgh","school_companion"],learning_activity:["activity","robot","children_learning"],golden_moment:["golden_moment","emotion"],product_invention:["product","first_invention","steam_output"],event_sunbot_day:["event","sunbot_day"],teacher_companion:["teacher","companion"],backup_beautiful:["backup_beautiful","sales_candidate"],unknown:[]}; return map[cat]||[];
+}
+async function demoUpload(files){ return {assets:files.map(f=>({...f,media_id:uid("media"),thumbnail_url:f.preview||"",file_url:"demo://"+f.file_name,created_at:new Date().toISOString()}))}; }
+
+function renderLibrary(){
+  renderFilterClasses(); FILTER_UNCLASSIFIED = FILTER_UNCLASSIFIED && true;
+  const school=val("filterSchool"), cls=val("filterClass"), cat=val("filterCategory");
+  let rows=LIBRARY.filter(x=>(!school||x.school_id===school)&&(!cls||assetClassIds(x).includes(cls))&&(!cat||x.primary_category===cat));
+  if(FILTER_UNCLASSIFIED) rows=rows.filter(x=>!x.primary_category||x.primary_category==="unknown"||!x.usage_tags||!x.usage_tags.length);
+  VISIBLE_IDS=rows.map(x=>x.media_id||x.local_id);
+  document.getElementById("librarySummary").textContent=`${rows.length} / ${LIBRARY.length} tư liệu đang hiển thị.`;
+  document.getElementById("libraryGrid").innerHTML=rows.map(x=>mediaCardHtml(x,false)).join("")||`<div class="hint">Chưa có tư liệu phù hợp bộ lọc.</div>`;
+  updateSelectedCount();
+}
+async function loadLibraryFromBackend(){
+  try{
+    showLoading(true,"Đang tải thư viện và preview...");
+    const out=await post("media_library_list_assets",{filters:{school_id:val("filterSchool"),class_id:val("filterClass"),category:val("filterCategory"),include_preview:true,limit:120}});
+    LIBRARY=(out.assets||out.items||[]).map(a=>({...a, school_name:a.school_name||displaySchoolName(a)}));
+    renderLibrary(); refreshDashboard();
+  }
+  catch(err){showMessage(err.message,"err")} finally{showLoading(false)}
+}
+function showUnclassifiedOnly(){FILTER_UNCLASSIFIED=!FILTER_UNCLASSIFIED;renderLibrary();}
+function openEdit(id){
+  const item=LIBRARY.find(x=>(x.media_id||x.local_id)===id); if(!item) return; CURRENT_EDIT_ID=id;
+  document.getElementById("editSub").textContent=item.file_name_original||item.name||id;
+  renderEditPreview(item);
+  setVal("editSchool", item.school_id||""); onEditSchoolChange(); setVal("editClass", item.class_id||""); renderClassChecks("editClassChecks", (CONFIG.classes||[]).filter(c=>!val("editSchool")||c.school_id===val("editSchool")), assetClassIds(item)); setVal("editScope", item.scope||"unknown"); setVal("editCategory", item.primary_category||"unknown");
+  setChecks("editTags", normalizeArray(item.media_tags)); setChecks("editUsages", normalizeArray(item.usage_tags)); setVal("editQuality", String(item.quality_rating||3)); setVal("editFeatured", item.is_featured||"no"); setVal("editNote", item.note||item.caption||"");
+  document.getElementById("editModal").classList.add("show");
+}
+function closeEdit(){document.getElementById("editModal").classList.remove("show"); CURRENT_EDIT_ID=null;}
+async function saveEdit(){
+  const idx=LIBRARY.findIndex(x=>(x.media_id||x.local_id)===CURRENT_EDIT_ID); if(idx<0) return;
+  const school=selected(CONFIG.schools,"school_id",val("editSchool")); let ids=getSelectedClassIds("editClassChecks"); const primary=val("editClass"); if(primary && !ids.includes(primary)) ids.unshift(primary); ids=[...new Set(ids)]; const names=classNamesFromIds(ids); const cls=selected(CONFIG.classes,"class_id",ids[0]||"");
+  const update={school_id:school.school_id||"", school_name:school.school_name||"", class_id:cls.class_id||"", class_name:cls.class_name||"", class_ids:ids, class_names:names, scope:val("editScope"), primary_category:val("editCategory"), media_tags:getChecks("editTags"), usage_tags:getChecks("editUsages"), quality_rating:val("editQuality"), is_featured:val("editFeatured"), note:val("editNote")};
+  LIBRARY[idx]={...LIBRARY[idx],...update};
+  try{ if(WEB_APP_URL && LIBRARY[idx].media_id) await post("media_library_update_asset",{media_id:LIBRARY[idx].media_id, data:update}); showMessage("Đã lưu metadata.","ok"); }
+  catch(err){showMessage("Đã lưu tạm trong trình duyệt, backend lỗi: "+err.message,"warn")}
+  closeEdit(); renderLibrary(); refreshDashboard(); renderSelectionBoard();
+}
+
+function renderEditPreview(item){
+  const box=document.getElementById("editPreview"); const src=assetPreviewSrc(item); const isVideo=String(item.mime_type||"").startsWith("video/");
+  if(src && isVideo) box.innerHTML=`<video controls src="${escapeHtml(src)}"></video>`;
+  else if(src) box.innerHTML=`<img src="${escapeHtml(src)}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'hint',textContent:'Không tải được preview'}))">`;
+  else box.innerHTML=`<span class="hint">Không có preview. Có thể file Drive chưa cấp quyền hoặc là video chưa hỗ trợ preview trong thẻ.</span>`;
+}
+function openPreview(id){
+  const item=LIBRARY.find(x=>(x.media_id||x.local_id)===id); if(!item) return;
+  const src=assetPreviewSrc(item); const isVideo=String(item.mime_type||"").startsWith("video/");
+  document.getElementById("previewSub").textContent=`${item.file_name_original||item.name||id} · ${displaySchoolName(item)} · ${displayClassNames(item)}`;
+  const body=document.getElementById("previewBody");
+  if(src && isVideo) body.innerHTML=`<video class="full-preview" controls src="${escapeHtml(src)}"></video>`;
+  else if(src) body.innerHTML=`<img class="full-preview" src="${escapeHtml(src)}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'hint',textContent:'Không tải được ảnh preview'}))">`;
+  else body.innerHTML=`<div class="hint">Không có preview để xem. Hãy kiểm tra quyền file Drive hoặc tải lại từ backend với include_preview.</div>`;
+  document.getElementById("previewModal").classList.add("show");
+}
+function closePreview(){document.getElementById("previewModal").classList.remove("show");}
+function toggleSelectAsset(id,on){ if(on) SELECTED_IDS.add(id); else SELECTED_IDS.delete(id); updateSelectedCount(); }
+function selectVisibleAssets(on){ if(on) VISIBLE_IDS.forEach(id=>SELECTED_IDS.add(id)); else VISIBLE_IDS.forEach(id=>SELECTED_IDS.delete(id)); renderLibrary(); updateSelectedCount(); }
+function updateSelectedCount(){ const el=document.getElementById("selectedCount"); if(el) el.textContent=SELECTED_IDS.size?`Đã chọn ${SELECTED_IDS.size} ảnh/video.`:"Chưa chọn ảnh nào."; }
+function openBulkEdit(){
+  if(!SELECTED_IDS.size){ showMessage("Chưa chọn ảnh nào để phân loại hàng loạt.","warn"); return; }
+  document.getElementById("bulkSub").textContent=`Áp dụng cho ${SELECTED_IDS.size} ảnh/video đã chọn.`;
+  setVal("bulkSchool", val("filterSchool") || ""); onBulkSchoolChange(); setVal("bulkScope", ""); setVal("bulkCategory", ""); setVal("bulkQuality", ""); setVal("bulkFeatured", ""); setVal("bulkNote", ""); setChecks("bulkTags", []); setChecks("bulkUsages", []);
+  document.getElementById("bulkModal").classList.add("show");
+}
+function closeBulkEdit(){document.getElementById("bulkModal").classList.remove("show");}
+async function applyBulkEdit(){
+  const ids=[...SELECTED_IDS]; if(!ids.length) return;
+  const school=selected(CONFIG.schools,"school_id",val("bulkSchool")); const clsIds=getSelectedClassIds("bulkClassChecks"); const names=classNamesFromIds(clsIds); const first=selected(CONFIG.classes,"class_id",clsIds[0]||"");
+  const patch={};
+  if(val("bulkSchool")){ patch.school_id=school.school_id||""; patch.school_name=school.school_name||""; }
+  if(val("bulkScope")) patch.scope=val("bulkScope");
+  if(clsIds.length){ patch.class_ids=clsIds; patch.class_names=names; patch.class_id=first.class_id||""; patch.class_name=first.class_name||""; patch.scope=patch.scope||"class"; }
+  if(val("bulkCategory")) patch.primary_category=val("bulkCategory");
+  const tags=getChecks("bulkTags"); if(tags.length) patch.media_tags=tags;
+  const usages=getChecks("bulkUsages"); if(usages.length) patch.usage_tags=usages;
+  if(val("bulkQuality")) patch.quality_rating=val("bulkQuality");
+  if(val("bulkFeatured")) patch.is_featured=val("bulkFeatured");
+  if(val("bulkNote")) patch.note=val("bulkNote");
+  if(!Object.keys(patch).length){ showMessage("Chưa chọn metadata nào để áp dụng.","warn"); return; }
+  showLoading(true,"Đang lưu phân loại hàng loạt...");
+  let ok=0, fail=0;
+  for(const id of ids){
+    const idx=LIBRARY.findIndex(x=>(x.media_id||x.local_id)===id); if(idx<0) continue;
+    LIBRARY[idx]={...LIBRARY[idx],...patch};
+    try{ if(WEB_APP_URL && LIBRARY[idx].media_id) await post("media_library_update_asset",{media_id:LIBRARY[idx].media_id, data:patch}); ok++; }
+    catch(err){ fail++; console.warn(err); }
+  }
+  showLoading(false); closeBulkEdit(); renderLibrary(); refreshDashboard(); renderSelectionBoard(); showMessage(`Đã áp dụng cho ${ok || ids.length} tư liệu${fail?`, ${fail} lỗi backend`:""}.`, fail?"warn":"ok");
+}
+
+function refreshDashboard(){
+  const total=LIBRARY.length; document.getElementById("mTotal").textContent=total;
+  document.getElementById("mSchoolBook").textContent=LIBRARY.filter(x=>normalizeArray(x.usage_tags).includes("school_book")).length;
+  document.getElementById("mClassBook").textContent=LIBRARY.filter(x=>normalizeArray(x.usage_tags).includes("class_book")).length;
+  const rows=DEFAULT_CATEGORIES.filter(c=>c.id!=="unknown").map(c=>{
+    const have=LIBRARY.filter(x=>x.primary_category===c.id && normalizeArray(x.usage_tags).includes("school_book")).length;
+    const need=c.required_school||0; const pct=need?Math.min(100,Math.round(have/need*100)):100; const status=have>=need?"Đủ":(have>0?"Cần thêm":"Thiếu");
+    return `<tr><td>${escapeHtml(c.label)}</td><td>${have}/${need}</td><td><div class="progress"><div class="bar" style="width:${pct}%"></div></div></td><td>${status}</td></tr>`;
+  }).join("");
+  document.getElementById("readinessTable").innerHTML=`<thead><tr><th>Hạng mục quyển trường</th><th>Số lượng</th><th>Tiến độ</th><th>Trạng thái</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function renderSelectionBoard(){
+  renderSelectionClasses();
+  const type=val("outputType")||"school_book", school=val("selectionSchool"), cls=val("selectionClass");
+  const reqs=SELECTION_REQUIREMENTS[type]||[];
+  const rows=reqs.map(([slot,label,need,cat])=>{
+    const candidates=LIBRARY.filter(x=>x.primary_category===cat && normalizeArray(x.usage_tags).includes(type==="school_book"?"school_book":type==="class_book"?"class_book":type) && (!school||x.school_id===school) && (type!=="class_book"||!cls||assetClassIds(x).includes(cls)));
+    const sorted=candidates.sort((a,b)=>Number(b.quality_rating||0)-Number(a.quality_rating||0));
+    return `<tr><td>${escapeHtml(label)}</td><td>${sorted.length}/${need}</td><td>${sorted.slice(0,3).map(x=>escapeHtml(x.file_name_original||x.file_name||"ảnh")).join("<br>")||"Chưa có"}</td><td>${sorted.length>=need?"Đủ":"Thiếu"}</td></tr>`;
+  }).join("");
+  document.getElementById("selectionTable").innerHTML=`<thead><tr><th>Vai trò nội dung</th><th>Ứng viên</th><th>Ảnh ưu tiên</th><th>Trạng thái</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function exportSessionJson(){
+  const blob=new Blob([JSON.stringify({exported_at:new Date().toISOString(), library:LIBRARY},null,2)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sunbot_media_library_session.json"; a.click(); URL.revokeObjectURL(a.href);
+}
+
+function switchTab(tab){["upload","curate","dashboard","selection"].forEach(t=>{document.getElementById("view-"+t).style.display=t===tab?"block":"none";document.getElementById("tab-"+t).classList.toggle("active",t===tab)}); if(tab==="curate") renderLibrary(); if(tab==="dashboard") refreshDashboard(); if(tab==="selection") renderSelectionBoard();}
+function showLoading(on,text){const el=document.getElementById("loadStatus");el.classList.toggle("show",!!on); if(text) el.querySelector("span:last-child").textContent=text;}
+function showMessage(text,type="ok"){const el=document.getElementById("message");el.textContent=text;el.className=`message show ${type}`;setTimeout(()=>el.classList.remove("show"),6500);}
+async function post(action,data){ if(!WEB_APP_URL) throw new Error("Chưa cấu hình WEB_APP_URL."); const res=await fetch(WEB_APP_URL,{method:"POST",body:JSON.stringify({action,data}),headers:{"Content-Type":"text/plain;charset=utf-8"}}); const json=await res.json(); if(json.status && !["success","ok"].includes(json.status)) throw new Error(json.message||JSON.stringify(json)); return json.result||json; }
+function openSettings(){document.getElementById("settingsModal").classList.add("show");}
+function closeSettings(){document.getElementById("settingsModal").classList.remove("show");}
+function saveSettings(){WEB_APP_URL=val("webAppUrlInput");localStorage.setItem("sunbot_media_web_app_url",WEB_APP_URL);closeSettings(); if(WEB_APP_URL) loadConfig().catch(e=>showMessage(e.message,"err"));}
+function selected(rows,key,value){return (rows||[]).find(r=>r[key]===value)||{};} function val(id){return (document.getElementById(id)?.value||"").trim();} function setVal(id,v){const el=document.getElementById(id); if(el) el.value=v||"";}
+function labelCategory(id){return (DEFAULT_CATEGORIES.find(x=>x.id===id)||{}).label||id||"Chưa phân loại";}
+function normalizeArray(v){ if(Array.isArray(v)) return v; return String(v||"").split(/;|,|\|/).map(x=>x.trim()).filter(Boolean); }
+function uid(prefix){return prefix+"_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8);} function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function normalizeFileName(name){return String(name||"file").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/[^a-zA-Z0-9._-]+/g,"_").slice(0,120);}
+function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(new Error("Không đọc được file."));r.onload=()=>resolve(String(r.result).split(",")[1]||"");r.readAsDataURL(file);});}
+function readImage(file){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error("Không đọc được ảnh."));img.src=URL.createObjectURL(file);});}
+function canvasDataUrl(img,maxW,maxH,quality){const {w,h}=fit(img.width,img.height,maxW,maxH);const c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d");ctx.drawImage(img,0,0,w,h);return c.toDataURL("image/jpeg",quality);}
+function resizeImageBlob(img,maxW,maxH,quality,mime){return new Promise(resolve=>{const {w,h}=fit(img.width,img.height,maxW,maxH);const c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d");ctx.drawImage(img,0,0,w,h);c.toBlob(b=>resolve(b),mime||"image/jpeg",quality);});}
+function fit(w,h,maxW,maxH){const r=Math.min(maxW/w,maxH/h,1);return {w:Math.round(w*r),h:Math.round(h*r)};}
+</script>
+</body>
+</html>
