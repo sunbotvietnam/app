@@ -137,11 +137,20 @@
   function displayTeacherName(name, id){
     const rawName = String(name || '');
     const rawId = String(id || '');
-    if(rawId.toUpperCase()==='GV-0016' || rawName.toLowerCase().includes('nguyễn tường vân') || rawName.toLowerCase().includes('nguyen tuong van')) return 'Giáo viên Test';
+    if(rawId.toUpperCase()==='GV-0016') return 'Giáo viên Test';
     return rawName;
   }
-  function hubDisplayName(){ return displayTeacherName(hubUserName(), hubTeacherId()); }
   function isHubAdmin(){ const u=state.auth.user||{}; const raw=String(u.PermissionGroupID||u.role_id||u.Role||u.role||'').toUpperCase(); return raw.includes('ADMIN')||raw.includes('CEO')||raw.includes('STA_ADMIN'); }
+  function hubDisplayName(){ return isHubAdmin() ? hubUserName() : displayTeacherName(hubUserName(), hubTeacherId()); }
+  function hubIdentityLine(){ return isHubAdmin() ? 'Admin · ' + (hubTeacherId() || 'Sunbot ID') : hubDisplayName() + ' · ' + (hubTeacherId() || 'Sunbot ID'); }
+  function confirmAccountAdminCode(){
+    const code = prompt('Nhập mã xác nhận quản trị để hoàn tất thao tác tài khoản:');
+    if(code !== '1906'){
+      alert('Mã xác nhận không đúng. Thao tác đã hủy.');
+      return false;
+    }
+    return true;
+  }
   function teacherLocked(){ return !!state.auth.token && !isHubAdmin() && !!state.data.teacher_id; }
   function saveAuth(r){
     state.auth.token = r.token || '';
@@ -559,7 +568,7 @@
           </div>
           <div class="min-w-0 flex-1">
             <div class="font-black text-[17px] text-slate-950 leading-tight">Sunbot Teacher Hub</div>
-            <div class="text-[12px] text-slate-500 leading-snug mt-0.5 truncate">${esc(hubDisplayName())} · ${esc(hubTeacherId() || 'Sunbot ID')}</div>
+            <div class="text-[12px] text-slate-500 leading-snug mt-0.5 truncate">${esc(hubIdentityLine())}</div>
           </div>
           <button id="btnHubLogout" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 active-scale"><i class="fa-solid fa-right-from-bracket"></i></button>
         </div>
@@ -595,7 +604,7 @@
     return `${section('Quản trị tài khoản', 'Chỉ Admin thấy mục này. Dùng để cấp mới hoặc cập nhật ID/mật khẩu cho tài khoản giáo viên.')}
       ${card(`<div class="p-3 space-y-4">
         <div class="rounded-xl bg-orange-50 border border-orange-100 p-3 text-[12px] text-orange-800 leading-relaxed">
-          Tài khoản mới dùng backend Teacher Academy. Với tài khoản cũ, hệ thống sẽ gửi yêu cầu đổi ID/mật khẩu về backend; nếu backend chưa có action cập nhật, app sẽ báo lỗi để mình bổ sung tiếp.
+          Tài khoản mới dùng backend Teacher Academy. Với tài khoản cũ, hệ thống sẽ gửi yêu cầu đổi ID/mật khẩu về backend. Mỗi thao tác cần qua bước xác nhận quản trị cuối cùng.
         </div>
         <div class="grid grid-cols-2 gap-2">
           <input id="acctName" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Họ tên giáo viên" />
@@ -693,6 +702,7 @@
       Role: (($('acctRole')||{}).value || 'Teacher')
     };
     if(!teacher.FullName || !teacher.Email || !teacher.Pin){ state.accountAdmin.error='Cần nhập đủ họ tên, ID/email và mật khẩu.'; state.accountAdmin.ok=''; render(); return; }
+    if(!confirmAccountAdminCode()) return;
     state.accountAdmin.loading=true; state.accountAdmin.error=''; state.accountAdmin.ok=''; render();
     try{
       const r = await postText(TRAINING_BACKEND_URL,{action:'create_teacher_user',token:state.auth.token,teacher,source:'teacher_hub_admin'});
@@ -710,6 +720,7 @@
     const Pin = norm(($('acctNewPass')||{}).value);
     if(!TeacherID){ state.accountAdmin.error='Cần chọn giáo viên cần đổi.'; state.accountAdmin.ok=''; render(); return; }
     if(!Username && !Pin){ state.accountAdmin.error='Cần nhập ID/email mới hoặc mật khẩu mới.'; state.accountAdmin.ok=''; render(); return; }
+    if(!confirmAccountAdminCode()) return;
     state.accountAdmin.loading=true; state.accountAdmin.error=''; state.accountAdmin.ok=''; render();
     try{
       const r = await postText(TRAINING_BACKEND_URL,{action:'admin_update_teacher_credentials',token:state.auth.token,teacher:{TeacherID,Username,Email:Username,Pin},source:'teacher_hub_admin'});
