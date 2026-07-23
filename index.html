@@ -99,6 +99,8 @@
       loading: false
     },
     hubModule: 'report',
+    showAccountAdmin: false,
+    accountAdmin: { loading:false, error:'', ok:'' },
     loading: false,
     configLoading: true,
     enrollmentLoading: false,
@@ -258,6 +260,7 @@
       ${loadingNotices}
       ${configWarning}
       ${enrollmentWarning}
+      ${renderAccountAdminPanel()}
       <div id="reportFormStart" class="mx-4 mt-4 flex items-center justify-between gap-3">
         <div>
           <div class="text-[11px] font-black tracking-[.14em] text-orange-500 uppercase">Báo cáo ca học</div>
@@ -584,7 +587,47 @@
         ${hubCard('Đánh giá trẻ','Mở app đánh giá trẻ theo lớp và hoạt động.','fa-clipboard-check','blue','evaluation','Link ngoài')}
         ${hubCard('Học viện','Tài liệu, bài tập, tiến độ học tập giáo viên.','fa-graduation-cap','amber','academy','ID/pass chung')}
         ${hubCard('Thu nhập của tôi','Theo dõi số buổi dạy và đối soát thu nhập khi hệ thống hoàn thiện.','fa-wallet','emerald','payroll','Đang xây')}
+        ${isHubAdmin()?hubCard('Tài khoản','Cấp mới hoặc đổi ID/mật khẩu cho giáo viên.','fa-user-gear','blue','accounts','Admin'):''}
       </div>`;
+  }
+
+  function renderAccountAdminPanel(){
+    if(!state.showAccountAdmin || !isHubAdmin()) return '';
+    const teachers = state.config.teachers.filter(t=>isTruthy(t.active));
+    const acc = state.accountAdmin;
+    return `${section('Quản trị tài khoản', 'Chỉ Admin thấy mục này. Dùng để cấp mới hoặc cập nhật ID/mật khẩu cho tài khoản giáo viên.')}
+      ${card(`<div class="p-3 space-y-4">
+        <div class="rounded-xl bg-orange-50 border border-orange-100 p-3 text-[12px] text-orange-800 leading-relaxed">
+          Tài khoản mới dùng backend Teacher Academy. Với tài khoản cũ, hệ thống sẽ gửi yêu cầu đổi ID/mật khẩu về backend; nếu backend chưa có action cập nhật, app sẽ báo lỗi để mình bổ sung tiếp.
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="acctName" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Họ tên giáo viên" />
+          <input id="acctId" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="ID/email đăng nhập" />
+          <input id="acctPass" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Mật khẩu/PIN" />
+          <input id="acctRegion" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Khu vực: HN/NA..." />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <select id="acctRole" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
+            <option>Teacher</option><option>Admin</option><option>Ambassador</option>
+          </select>
+          <button id="btnCreateAccount" class="h-10 rounded-xl bg-orange-500 text-white text-[13px] font-bold active-scale">${acc.loading?'Đang xử lý...':'Cấp tài khoản mới'}</button>
+        </div>
+        <div class="border-t border-gray-100 pt-4">
+          <div class="text-[12px] font-black text-gray-500 uppercase">Đổi ID/mật khẩu tài khoản cũ</div>
+          <div class="grid grid-cols-2 gap-2 mt-2">
+            <select id="acctExisting" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
+              <option value="">Chọn giáo viên cần đổi</option>
+              ${teachers.map(t=>`<option value="${esc(t.teacher_id)}">${esc(t.teacher_name)} · ${esc(t.teacher_id)}</option>`).join('')}
+            </select>
+            <input id="acctNewId" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="ID/email mới, nếu đổi" />
+            <input id="acctNewPass" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Mật khẩu/PIN mới" />
+            <button id="btnUpdateAccount" class="h-10 rounded-xl bg-gray-900 text-white text-[13px] font-bold active-scale">${acc.loading?'Đang xử lý...':'Cập nhật tài khoản'}</button>
+          </div>
+        </div>
+        ${acc.ok?`<div class="p-2 rounded-lg bg-green-50 text-green-700 text-[12px]">${esc(acc.ok)}</div>`:''}
+        ${acc.error?`<div class="p-2 rounded-lg bg-red-50 text-red-700 text-[12px]">${esc(acc.error)}</div>`:''}
+        <button id="btnCloseAccountAdmin" class="h-10 rounded-xl bg-white border border-gray-200 text-gray-600 text-[13px] font-bold active-scale">Đóng quản trị tài khoản</button>
+      </div>`)}`;
   }
 
   async function hubLogin(){
@@ -639,12 +682,53 @@
     if(action==='academy'){ window.location.href = ACADEMY_APP_URL; return; }
     if(action==='impact'){ window.location.href = IMPACT_APP_URL; return; }
     if(action==='myReports'){ state.showMyReports = true; render(); return; }
+    if(action==='accounts'){ state.showAccountAdmin = true; render(); setTimeout(()=>document.getElementById('acctName')?.scrollIntoView({behavior:'smooth'}),0); return; }
     if(action==='payroll'){ alert('Mục Thu nhập của tôi đang được xây dựng. Sau khi hoàn thiện, mục này sẽ hiển thị số buổi dạy, đối soát và tổng thu nhập dự kiến.'); }
+  }
+
+  async function createHubAccount(){
+    if(!isHubAdmin()) return;
+    const teacher = {
+      FullName: norm(($('acctName')||{}).value),
+      Email: norm(($('acctId')||{}).value),
+      Pin: norm(($('acctPass')||{}).value),
+      Region: norm(($('acctRegion')||{}).value),
+      Role: (($('acctRole')||{}).value || 'Teacher')
+    };
+    if(!teacher.FullName || !teacher.Email || !teacher.Pin){ state.accountAdmin.error='Cần nhập đủ họ tên, ID/email và mật khẩu.'; state.accountAdmin.ok=''; render(); return; }
+    state.accountAdmin.loading=true; state.accountAdmin.error=''; state.accountAdmin.ok=''; render();
+    try{
+      const r = await postText(TRAINING_BACKEND_URL,{action:'create_teacher_user',token:state.auth.token,teacher,source:'teacher_hub_admin'});
+      if(!r.success) throw new Error(r.message || 'Không tạo được tài khoản.');
+      state.accountAdmin.ok = 'Đã tạo tài khoản: ' + (r.user?.Username || teacher.Email);
+      await syncHubProfile();
+    }catch(err){ state.accountAdmin.error = err.message || String(err); }
+    finally{ state.accountAdmin.loading=false; render(); }
+  }
+
+  async function updateHubAccount(){
+    if(!isHubAdmin()) return;
+    const TeacherID = norm(($('acctExisting')||{}).value);
+    const Username = norm(($('acctNewId')||{}).value);
+    const Pin = norm(($('acctNewPass')||{}).value);
+    if(!TeacherID){ state.accountAdmin.error='Cần chọn giáo viên cần đổi.'; state.accountAdmin.ok=''; render(); return; }
+    if(!Username && !Pin){ state.accountAdmin.error='Cần nhập ID/email mới hoặc mật khẩu mới.'; state.accountAdmin.ok=''; render(); return; }
+    state.accountAdmin.loading=true; state.accountAdmin.error=''; state.accountAdmin.ok=''; render();
+    try{
+      const r = await postText(TRAINING_BACKEND_URL,{action:'admin_update_teacher_credentials',token:state.auth.token,teacher:{TeacherID,Username,Email:Username,Pin},source:'teacher_hub_admin'});
+      if(!r.success) throw new Error(r.message || 'Backend chưa cập nhật được tài khoản.');
+      state.accountAdmin.ok = 'Đã cập nhật tài khoản ' + TeacherID + '.';
+      await syncHubProfile();
+    }catch(err){ state.accountAdmin.error = err.message || String(err); }
+    finally{ state.accountAdmin.loading=false; render(); }
   }
 
   function bindEvents(){
     const on = (id, ev, fn) => { const el=$(id); if(el) el.addEventListener(ev, fn); };
     on('btnHubLogout','click',hubLogout);
+    on('btnCreateAccount','click',createHubAccount);
+    on('btnUpdateAccount','click',updateHubAccount);
+    on('btnCloseAccountAdmin','click',()=>{ state.showAccountAdmin=false; state.accountAdmin.error=''; state.accountAdmin.ok=''; render(); });
     document.querySelectorAll('[data-hub-action]').forEach(el=>el.addEventListener('click',()=>handleHubAction(el.dataset.hubAction)));
     on('btnImpact','click',()=>handleHubAction('impact'));
     on('btnEvaluation','click',()=>handleHubAction('evaluation'));
