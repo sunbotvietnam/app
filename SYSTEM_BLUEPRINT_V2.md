@@ -650,6 +650,16 @@ USER_TENANT_ACCESS
 AUDIT_LOGS
 ```
 
+Frontend chi duoc hien thi "Backend da xac nhan" khi response co:
+
+```text
+success = true
+tenant_id
+message hoac audit_log_id neu co
+```
+
+Neu request da gui nhung backend loi/khong co action, frontend phai hien thi "Chua tao duoc tenant tren backend" va luu lich su thao tac local de SUPER_ADMIN biet trang thai.
+
 Trang thai tenant:
 
 ```text

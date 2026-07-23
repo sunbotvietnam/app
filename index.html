@@ -62,6 +62,7 @@
   const CONFIG_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
   const ENROLLMENT_CACHE_PREFIX = "sunbot_enrollment_cache_v35_";
   const HUB_SETTINGS_KEY = "sunbot_hub_settings_v1";
+  const TENANT_PROVISION_LOG_KEY = "sunbot_tenant_provision_log_v1";
 
   const DEMO_CONFIG = {
     teachers: [
@@ -107,7 +108,7 @@
     hubSettings: loadHubSettings(),
     hubSettingsAdmin: { loading:false, error:'', ok:'' },
     accountAdmin: { loading:false, error:'', ok:'' },
-    systemAdmin: { loading:false, error:'', ok:'' },
+    systemAdmin: { loading:false, error:'', ok:'', last:null, log: loadTenantProvisionLog() },
     loading: false,
     configLoading: true,
     enrollmentLoading: false,
@@ -157,6 +158,19 @@
   }
   function validHttpUrl(url){
     try{ const u = new URL(url); return ['http:','https:'].includes(u.protocol); }catch(e){ return false; }
+  }
+  function loadTenantProvisionLog(){
+    try{ return JSON.parse(localStorage.getItem(TENANT_PROVISION_LOG_KEY) || '[]').slice(0,8); }catch(e){ return []; }
+  }
+  function rememberTenantProvision(entry){
+    const item = Object.assign({ at: new Date().toISOString() }, entry || {});
+    state.systemAdmin.last = item;
+    state.systemAdmin.log = [item].concat(state.systemAdmin.log || []).slice(0,8);
+    try{ localStorage.setItem(TENANT_PROVISION_LOG_KEY, JSON.stringify(state.systemAdmin.log)); }catch(e){}
+  }
+  function formatTime(iso){
+    if(!iso) return '';
+    try{ return new Date(iso).toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'}); }catch(e){ return iso; }
   }
   function todayISO(){ return new Date().toISOString().slice(0,10); }
   function isTruthy(v){ return v === true || String(v).toUpperCase() === 'TRUE' || String(v).toLowerCase() === 'active' || String(v).trim() === ''; }
@@ -713,6 +727,7 @@
   function renderSystemAdminPanel(){
     if(!state.showSystemAdmin || !isSuperAdmin()) return '';
     const admin = state.systemAdmin;
+    const last = admin.last || (admin.log && admin.log[0]);
     return `${section('Quản trị hệ thống V2', 'Chỉ SUPER_ADMIN/legacy admin thấy mục này. Dùng để tạo tenant, trường/đối tác và cấu hình năm học.')}
       ${card(`<div class="p-3 space-y-4">
         <div class="rounded-xl bg-slate-50 border border-slate-100 p-3 text-[12px] text-slate-600 leading-relaxed">
@@ -752,8 +767,21 @@
           <button id="btnProvisionTenant" class="h-10 rounded-xl bg-orange-500 text-white text-[13px] font-bold active-scale">${admin.loading?'Đang tạo...':'Tạo tenant'}</button>
           <button id="btnCreateHeadTenant" class="h-10 rounded-xl bg-slate-900 text-white text-[13px] font-bold active-scale">Khởi tạo HEAD</button>
         </div>
+        ${admin.loading?`<div class="p-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-800 text-[12px] flex gap-2 items-start"><div class="loader shrink-0 !w-5 !h-5"></div><div><b>Đang gửi yêu cầu tạo tenant...</b><br>Vui lòng chờ phản hồi backend trước khi bấm lại.</div></div>`:''}
         ${admin.ok?`<div class="p-2 rounded-lg bg-green-50 text-green-700 text-[12px]">${esc(admin.ok)}</div>`:''}
         ${admin.error?`<div class="p-2 rounded-lg bg-red-50 text-red-700 text-[12px]">${esc(admin.error)}</div>`:''}
+        ${last?`<div class="rounded-xl border ${last.status==='CONFIRMED'?'border-green-100 bg-green-50':last.status==='FAILED'?'border-red-100 bg-red-50':'border-amber-100 bg-amber-50'} p-3 text-[12px] leading-relaxed">
+          <div class="font-black ${last.status==='CONFIRMED'?'text-green-800':last.status==='FAILED'?'text-red-800':'text-amber-800'}">${esc(last.statusText || 'Trạng thái provision')}</div>
+          <div class="mt-1 text-slate-600">Tenant: <b>${esc(last.tenant_id || '')}</b> · ${esc(last.tenant_type || '')} · ${esc(formatTime(last.at))}</div>
+          ${last.message?`<div class="mt-1 text-slate-600">${esc(last.message)}</div>`:''}
+          ${last.backendId?`<div class="mt-1 text-slate-500">Backend ID: ${esc(last.backendId)}</div>`:''}
+        </div>`:''}
+        ${(admin.log||[]).length>1?`<details class="rounded-xl border border-gray-100 bg-white p-3">
+          <summary class="text-[12px] font-black text-gray-500 cursor-pointer">Lịch sử tạo tenant gần đây</summary>
+          <div class="mt-2 divide-y divide-gray-100">
+            ${admin.log.slice(1,6).map(x=>`<div class="py-2 text-[12px] text-gray-600"><b>${esc(x.tenant_id||'')}</b> · ${esc(x.statusText||x.status||'')} · ${esc(formatTime(x.at))}</div>`).join('')}
+          </div>
+        </details>`:''}
         <button id="btnCloseSystemAdmin" class="h-10 rounded-xl bg-white border border-gray-200 text-gray-600 text-[13px] font-bold active-scale">Đóng quản trị hệ thống</button>
       </div>`)}`;
   }
@@ -941,6 +969,13 @@
     }
     const super_code = askSuperAdminCode();
     if(!super_code) return;
+    rememberTenantProvision({
+      status: 'SENT',
+      statusText: 'Đã gửi yêu cầu, đang chờ backend xác nhận',
+      tenant_id: payload.tenant.tenant_id,
+      tenant_type: payload.tenant.tenant_type,
+      message: 'Yêu cầu đã được tạo trên frontend và đang gửi tới backend Training.'
+    });
     state.systemAdmin.loading = true;
     state.systemAdmin.error = '';
     state.systemAdmin.ok = '';
@@ -948,10 +983,26 @@
     try{
       const r = await postText(TRAINING_BACKEND_URL,{action:'provision_tenant_v2',token:state.auth.token,super_code,tenant:payload.tenant,adminUser:payload.adminUser,source:'teacher_hub_super_admin'});
       if(!r.success) throw new Error(r.message || 'Backend chưa hỗ trợ provision tenant V2.');
-      state.systemAdmin.ok = 'Đã tạo/cập nhật tenant ' + payload.tenant.tenant_id + '.';
+      rememberTenantProvision({
+        status: 'CONFIRMED',
+        statusText: 'Backend đã xác nhận tạo/cập nhật tenant',
+        tenant_id: payload.tenant.tenant_id,
+        tenant_type: payload.tenant.tenant_type,
+        backendId: r.tenant_id || r.tenantId || r.id || payload.tenant.tenant_id,
+        message: r.message || 'Tenant đã được backend xác nhận. Có thể kiểm tra trong bảng TENANTS/USER_TENANT_ACCESS nếu backend đã ghi sheet.'
+      });
+      state.systemAdmin.ok = 'Backend đã xác nhận tenant ' + payload.tenant.tenant_id + '.';
       await syncHubProfile();
     }catch(err){
-      state.systemAdmin.error = err.message || String(err);
+      const msg = err.message || String(err);
+      rememberTenantProvision({
+        status: 'FAILED',
+        statusText: 'Chưa tạo được tenant trên backend',
+        tenant_id: payload.tenant.tenant_id,
+        tenant_type: payload.tenant.tenant_type,
+        message: msg
+      });
+      state.systemAdmin.error = msg;
     }finally{
       state.systemAdmin.loading = false;
       render();
