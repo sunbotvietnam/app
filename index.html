@@ -103,9 +103,11 @@
     hubModule: 'report',
     showAccountAdmin: false,
     showHubSettings: false,
+    showSystemAdmin: false,
     hubSettings: loadHubSettings(),
     hubSettingsAdmin: { loading:false, error:'', ok:'' },
     accountAdmin: { loading:false, error:'', ok:'' },
+    systemAdmin: { loading:false, error:'', ok:'' },
     loading: false,
     configLoading: true,
     enrollmentLoading: false,
@@ -167,16 +169,24 @@
     if(rawId.toUpperCase()==='GV-0016') return 'Giáo viên Test';
     return rawName;
   }
-  function isHubAdmin(){ const u=state.auth.user||{}; const raw=String(u.PermissionGroupID||u.role_id||u.Role||u.role||'').toUpperCase(); return raw.includes('ADMIN')||raw.includes('CEO')||raw.includes('STA_ADMIN'); }
+  function hubRoleRaw(){ const u=state.auth.user||{}; return String(u.PermissionGroupID||u.role_id||u.Role||u.role||'').toUpperCase().trim(); }
+  function isHubAdmin(){ const raw=hubRoleRaw(); return raw.includes('ADMIN')||raw.includes('CEO')||raw.includes('STA_ADMIN'); }
+  function isSuperAdmin(){
+    const raw = hubRoleRaw();
+    return raw.includes('SUPER_ADMIN') || raw.includes('CEO') || raw === 'ADMIN' || raw === 'STA_ADMIN';
+  }
   function hubDisplayName(){ return isHubAdmin() ? hubUserName() : displayTeacherName(hubUserName(), hubTeacherId()); }
   function hubIdentityLine(){ return isHubAdmin() ? 'Admin · ' + (hubTeacherId() || 'Sunbot ID') : hubDisplayName() + ' · ' + (hubTeacherId() || 'Sunbot ID'); }
-  function confirmAccountAdminCode(){
+  function askSuperAdminCode(){
     const code = prompt('Nhập mã xác nhận quản trị để hoàn tất thao tác tài khoản:');
     if(code !== '1906'){
       alert('Mã xác nhận không đúng. Thao tác đã hủy.');
-      return false;
+      return '';
     }
-    return true;
+    return code;
+  }
+  function confirmAccountAdminCode(){
+    return !!askSuperAdminCode();
   }
   function teacherLocked(){ return !!state.auth.token && !isHubAdmin() && !!state.data.teacher_id; }
   function saveAuth(r){
@@ -298,6 +308,7 @@
       ${enrollmentWarning}
       ${renderAccountAdminPanel()}
       ${renderHubSettingsPanel()}
+      ${renderSystemAdminPanel()}
       <div id="reportFormStart" class="mx-4 mt-4 flex items-center justify-between gap-3">
         <div>
           <div class="text-[11px] font-black tracking-[.14em] text-orange-500 uppercase">Báo cáo ca học</div>
@@ -633,6 +644,7 @@
         ${hubCard('Học viện','Tài liệu, bài tập và tiến độ đào tạo giáo viên.','fa-graduation-cap','amber','academy','ID chung')}
         ${hubCard('Thu nhập của tôi','Theo dõi số buổi dạy và đối soát khi hoàn thiện.','fa-wallet','emerald','payroll','Đang xây')}
         ${isHubAdmin()?hubCard('Tài khoản','Cấp mới hoặc đổi ID/mật khẩu cho giáo viên.','fa-user-gear','slate','accounts','Admin'):''}
+        ${isSuperAdmin()?hubCard('Hệ thống','Tạo tenant, năm học và cấu hình backend V2.','fa-sitemap','slate','system','1906'):''}
       </div>`;
   }
 
@@ -695,6 +707,54 @@
         ${admin.ok?`<div class="p-2 rounded-lg bg-green-50 text-green-700 text-[12px]">${esc(admin.ok)}</div>`:''}
         ${admin.error?`<div class="p-2 rounded-lg bg-red-50 text-red-700 text-[12px]">${esc(admin.error)}</div>`:''}
         <button id="btnCloseHubSettings" class="h-10 rounded-xl bg-white border border-gray-200 text-gray-600 text-[13px] font-bold active-scale">Đóng cấu hình</button>
+      </div>`)}`;
+  }
+
+  function renderSystemAdminPanel(){
+    if(!state.showSystemAdmin || !isSuperAdmin()) return '';
+    const admin = state.systemAdmin;
+    return `${section('Quản trị hệ thống V2', 'Chỉ SUPER_ADMIN/legacy admin thấy mục này. Dùng để tạo tenant, trường/đối tác và cấu hình năm học.')}
+      ${card(`<div class="p-3 space-y-4">
+        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3 text-[12px] text-slate-600 leading-relaxed">
+          Đây là bước chuẩn bị multi-tenant. Nếu backend chưa có action V2, app sẽ không ghi dữ liệu và sẽ báo rõ để bổ sung Apps Script tiếp.
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="sysTenantId" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400 uppercase" placeholder="Mã tenant: HEAD / SCHOOL_ABC" />
+          <input id="sysTenantName" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Tên tenant/trường/đối tác" />
+          <select id="sysTenantType" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
+            <option value="SCHOOL">School</option>
+            <option value="PARTNER">Partner</option>
+            <option value="FRANCHISE">Franchise</option>
+            <option value="HEAD">Head</option>
+          </select>
+          <input id="sysRegion" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Khu vực: HN/NA/..." />
+          <input id="sysSchoolYear" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" value="SY_2025_2026" placeholder="Năm học active" />
+          <select id="sysBackendMode" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
+            <option value="SHARED">Dùng backend chung</option>
+            <option value="DEDICATED">Backend riêng</option>
+          </select>
+        </div>
+        <input id="sysBackendUrl" class="w-full h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Data backend URL nếu dùng backend riêng hoặc đã có sẵn" />
+        <div class="border-t border-gray-100 pt-4">
+          <div class="text-[12px] font-black text-gray-500 uppercase">Admin tenant ban đầu</div>
+          <div class="grid grid-cols-2 gap-2 mt-2">
+            <input id="sysAdminName" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Tên admin trường/đối tác" />
+            <input id="sysAdminId" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="ID/email admin" />
+            <input id="sysAdminPass" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Mật khẩu/PIN ban đầu" />
+            <select id="sysAdminRole" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
+              <option value="TENANT_ADMIN">TENANT_ADMIN</option>
+              <option value="SCHOOL_VIEWER">SCHOOL_VIEWER</option>
+              <option value="PARTNER_VIEWER">PARTNER_VIEWER</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnProvisionTenant" class="h-10 rounded-xl bg-orange-500 text-white text-[13px] font-bold active-scale">${admin.loading?'Đang tạo...':'Tạo tenant'}</button>
+          <button id="btnCreateHeadTenant" class="h-10 rounded-xl bg-slate-900 text-white text-[13px] font-bold active-scale">Khởi tạo HEAD</button>
+        </div>
+        ${admin.ok?`<div class="p-2 rounded-lg bg-green-50 text-green-700 text-[12px]">${esc(admin.ok)}</div>`:''}
+        ${admin.error?`<div class="p-2 rounded-lg bg-red-50 text-red-700 text-[12px]">${esc(admin.error)}</div>`:''}
+        <button id="btnCloseSystemAdmin" class="h-10 rounded-xl bg-white border border-gray-200 text-gray-600 text-[13px] font-bold active-scale">Đóng quản trị hệ thống</button>
       </div>`)}`;
   }
 
@@ -761,6 +821,7 @@
     if(action==='settings' && isHubAdmin()){ state.showHubSettings = true; render(); setTimeout(()=>document.getElementById('hubInternalUrl')?.scrollIntoView({behavior:'smooth'}),0); return; }
     if(action==='myReports'){ state.showMyReports = true; render(); return; }
     if(action==='accounts'){ state.showAccountAdmin = true; render(); setTimeout(()=>document.getElementById('acctName')?.scrollIntoView({behavior:'smooth'}),0); return; }
+    if(action==='system' && isSuperAdmin()){ state.showSystemAdmin = true; render(); setTimeout(()=>document.getElementById('sysTenantId')?.scrollIntoView({behavior:'smooth'}),0); return; }
     if(action==='payroll'){ alert('Mục Thu nhập của tôi đang được xây dựng. Sau khi hoàn thiện, mục này sẽ hiển thị số buổi dạy, đối soát và tổng thu nhập dự kiến.'); }
   }
 
@@ -836,6 +897,66 @@
     if(!validHttpUrl(url)){ alert('Link chưa hợp lệ.'); return; }
     window.open(url, '_blank', 'noopener');
   }
+  function collectTenantProvisionPayload(){
+    const tenant = {
+      tenant_id: norm(($('sysTenantId')||{}).value).toUpperCase(),
+      tenant_name: norm(($('sysTenantName')||{}).value),
+      tenant_type: (($('sysTenantType')||{}).value || 'SCHOOL'),
+      default_region: norm(($('sysRegion')||{}).value),
+      active_school_year_id: norm(($('sysSchoolYear')||{}).value) || 'SY_2025_2026',
+      backend_mode: (($('sysBackendMode')||{}).value || 'SHARED'),
+      data_backend_url: norm(($('sysBackendUrl')||{}).value)
+    };
+    const adminUser = {
+      display_name: norm(($('sysAdminName')||{}).value),
+      username: norm(($('sysAdminId')||{}).value),
+      password: norm(($('sysAdminPass')||{}).value),
+      role: (($('sysAdminRole')||{}).value || 'TENANT_ADMIN')
+    };
+    return { tenant, adminUser };
+  }
+  async function provisionTenantV2(preset){
+    if(!isSuperAdmin()) return;
+    if(preset === 'HEAD'){
+      const set = (id, val) => { const el=$(id); if(el) el.value = val; };
+      set('sysTenantId','HEAD');
+      set('sysTenantName','Sunbot Head');
+      set('sysTenantType','HEAD');
+      set('sysRegion','ALL');
+      set('sysSchoolYear','SY_2025_2026');
+      set('sysBackendMode','SHARED');
+    }
+    const payload = collectTenantProvisionPayload();
+    if(!payload.tenant.tenant_id || !payload.tenant.tenant_name){
+      state.systemAdmin.error = 'Cần nhập mã tenant và tên tenant.';
+      state.systemAdmin.ok = '';
+      render();
+      return;
+    }
+    if(payload.tenant.backend_mode === 'DEDICATED' && payload.tenant.data_backend_url && !validHttpUrl(payload.tenant.data_backend_url)){
+      state.systemAdmin.error = 'Backend URL cần bắt đầu bằng http:// hoặc https://.';
+      state.systemAdmin.ok = '';
+      render();
+      return;
+    }
+    const super_code = askSuperAdminCode();
+    if(!super_code) return;
+    state.systemAdmin.loading = true;
+    state.systemAdmin.error = '';
+    state.systemAdmin.ok = '';
+    render();
+    try{
+      const r = await postText(TRAINING_BACKEND_URL,{action:'provision_tenant_v2',token:state.auth.token,super_code,tenant:payload.tenant,adminUser:payload.adminUser,source:'teacher_hub_super_admin'});
+      if(!r.success) throw new Error(r.message || 'Backend chưa hỗ trợ provision tenant V2.');
+      state.systemAdmin.ok = 'Đã tạo/cập nhật tenant ' + payload.tenant.tenant_id + '.';
+      await syncHubProfile();
+    }catch(err){
+      state.systemAdmin.error = err.message || String(err);
+    }finally{
+      state.systemAdmin.loading = false;
+      render();
+    }
+  }
 
   function bindEvents(){
     const on = (id, ev, fn) => { const el=$(id); if(el) el.addEventListener(ev, fn); };
@@ -846,6 +967,9 @@
     on('btnSaveHubSettings','click',saveHubSettings);
     on('btnOpenInternalCenter','click',openInternalCenterFromForm);
     on('btnCloseHubSettings','click',()=>{ state.showHubSettings=false; state.hubSettingsAdmin.error=''; state.hubSettingsAdmin.ok=''; render(); });
+    on('btnProvisionTenant','click',()=>provisionTenantV2());
+    on('btnCreateHeadTenant','click',()=>provisionTenantV2('HEAD'));
+    on('btnCloseSystemAdmin','click',()=>{ state.showSystemAdmin=false; state.systemAdmin.error=''; state.systemAdmin.ok=''; render(); });
     document.querySelectorAll('[data-hub-action]').forEach(el=>el.addEventListener('click',()=>handleHubAction(el.dataset.hubAction)));
     on('btnImpact','click',()=>handleHubAction('impact'));
     on('btnEvaluation','click',()=>handleHubAction('evaluation'));

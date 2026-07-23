@@ -75,6 +75,49 @@ student_id: STU_0001
 
 Khong sua du lieu nam cu khi tre len lop. Tao enrollment moi cho nam hoc moi.
 
+### 2.4 Student Journey
+
+Tach `STUDENTS` va `ENROLLMENTS` khong lam mat lien ket hanh trinh cua tre.
+
+Nguyen tac:
+
+```text
+student_id la dinh danh xuyen nam hoc
+enrollment_id la lan ghi danh trong mot nam hoc/cu lop cu the
+```
+
+Mot tre hoc toi da 3 nam voi Sunbot se co mot `student_id` va nhieu enrollment:
+
+```text
+STU_0001
+  ENR_0001 | SY_2025_2026 | Lop A1
+  ENR_0002 | SY_2026_2027 | Lop B1
+  ENR_0003 | SY_2027_2028 | Lop C1
+```
+
+Khi xem hanh trinh hoc tap:
+
+```text
+student_id
+-> all enrollments
+-> all sessions
+-> all assessments
+-> all certificates
+```
+
+Can co API:
+
+```text
+get_student_journey(token, tenant_id, student_id)
+```
+
+API nay tra ve hanh trinh 1-3 nam hoc cua tre, phuc vu:
+
+- chung nhan cuoi chuong trinh
+- danh gia tien bo
+- bao cao phu huynh/truong
+- phan tich tac dong hoc tap
+
 ## 3. Kien truc tong the
 
 ```text
@@ -585,6 +628,55 @@ generate_partner_report(token, tenant_id, school_year_id, month)
 export_global_analytics(token, school_year_id, filters, super_code)
 ```
 
+### 8.4 Provisioning APIs
+
+Dung cho SUPER_ADMIN tao tenant/truong/doi tac tu frontend.
+
+```text
+provision_tenant_v2(token, super_code, tenant, adminUser)
+test_tenant_backend(token, super_code, tenant_id)
+update_tenant_backend_url(token, super_code, tenant_id, data_backend_url)
+archive_tenant(token, super_code, tenant_id)
+```
+
+`provision_tenant_v2` nen tao/cap nhat:
+
+```text
+TENANTS
+TENANT_SETTINGS
+SCHOOL_YEARS neu chua co
+USERS cho admin tenant neu co nhap
+USER_TENANT_ACCESS
+AUDIT_LOGS
+```
+
+Trang thai tenant:
+
+```text
+ACTIVE            da dung duoc
+NEEDS_BACKEND_URL can dan backend URL rieng
+PROVISIONING      dang tao tai nguyen
+ERROR             tao loi, can xu ly
+PAUSED            tam dung
+ARCHIVED          luu tru
+```
+
+Giai doan dau:
+
+```text
+Frontend tao tenant + ghi config trung tam
+Backend rieng neu can thi admin dan data_backend_url
+```
+
+Giai doan sau:
+
+```text
+Tu copy Google Sheet template
+Tu gan cau hinh
+Tu test connection
+Tu cap nhat tenant thanh ACTIVE
+```
+
 ## 9. Frontend behavior
 
 Sau dang nhap, frontend phai:
@@ -782,6 +874,19 @@ tenant_id = HEAD
 school_year_id = SY_2025_2026
 ```
 
+Them frontend SUPER_ADMIN:
+
+```text
+Quan tri he thong V2
+- tao tenant HEAD/SCHOOL/PARTNER/FRANCHISE
+- chon backend chung/rieng
+- gan school_year active
+- tao admin tenant ban dau
+- goi action provision_tenant_v2
+```
+
+Neu backend chua ho tro `provision_tenant_v2`, frontend chi bao loi va khong anh huong app giao vien.
+
 ### Phase 2 - Chuan hoa class/enrollment
 
 Them:
@@ -896,4 +1001,3 @@ Truoc khi sua backend/frontend, can co:
 - [ ] Tao API `get_report_config_v2`.
 - [ ] Tao API `get_dashboard_summary`.
 - [ ] Tao audit log cho admin actions.
-
