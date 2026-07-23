@@ -48,7 +48,7 @@
 Việc cần làm tiếp:"></textarea></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button class="btn btn-white" onclick="closeReview()">Hủy</button><button class="btn btn-primary" onclick="submitReview()">Lưu đánh giá</button></div><div id="reviewMsg" class="msg"></div></div></div>
 
 <script>
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz6U054D9DYh02IEYU9oD9ssDgdxY2XjZz9gsmmW-TG2SnpqhMm1ZHhZQhA3J12DfWd/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxa7HAXTK4ihmrikop5RIoWwdKjnaEAMZX3E3VkKdi97IndLzSWWTFAWPMuwg339ljD/exec";
 const SCC_AUTH_URL = "https://script.google.com/macros/s/AKfycbznjHnaVq5PRVc-yGQd3RgZYtsHnOd2ibMhTghsl6vZerewb31lwVscw86LpgzhHVSJ/exec";
 const MODULE_ID = "teacher_academy";
 const state = { token:localStorage.getItem('sbtp_token')||'', sccToken:localStorage.getItem('scc_token')||new URLSearchParams(location.search).get('scc_token')||'', user:JSON.parse(localStorage.getItem('sbtp_user')||'null'), permissions:JSON.parse(localStorage.getItem('sbtp_permissions')||'{}'), isAdmin:false, current:'home', data:{sessions:[],submissions:[],evidence:[],leads:[],teachers:[],teacherProfile:{},dashboard:{},materials:[],materialLogs:[],content:[],accounts:[]} };
