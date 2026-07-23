@@ -432,11 +432,11 @@
         <div class="mt-2 flex justify-between text-[12px]"><span>Tổng: <b>${esc(r.total_attendance || 0)}</b> trẻ</span><span class="${r.has_attendance_photo?'text-green-700':'text-red-600'} font-bold">${esc(status)}</span></div>
       </div>`;
     }).join('');
-    return `${section('Báo cáo của tôi', 'Nhập mã PIN cá nhân để xem báo cáo của chính mình')}
+    return `${section('Báo cáo của tôi', state.auth.token ? 'Dùng phiên đăng nhập Hub để xem báo cáo của chính mình.' : 'Nhập mã PIN cá nhân để xem báo cáo của chính mình.')}
       ${card(`<div class="p-3 space-y-3">
         <select id="my_teacher_id" class="w-full h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">${optionList(state.config.teachers.filter(t=>isTruthy(t.active)), 'teacher_id', t => t.teacher_name, mr.teacher_id, 'Chọn giáo viên')}</select>
         <div class="grid grid-cols-2 gap-2">
-          <input id="my_pin" type="password" inputmode="numeric" value="${esc(mr.pin)}" class="w-full h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Mã PIN" />
+          ${state.auth.token ? `<div class="w-full h-10 rounded-lg border border-orange-100 bg-orange-50 text-orange-700 px-3 flex items-center text-[12px] font-bold">Dùng đăng nhập Hub</div>` : `<input id="my_pin" type="password" inputmode="numeric" value="${esc(mr.pin)}" class="w-full h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Mã PIN" />`}
           <select id="my_period" class="w-full h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
             <option value="today" ${mr.period==='today'?'selected':''}>Hôm nay</option>
             <option value="week" ${mr.period==='week'?'selected':''}>Tuần này</option>
@@ -778,10 +778,10 @@
 
   async function loadMyReports(){
     if(!state.myReports.teacher_id){ alert('Vui lòng chọn giáo viên.'); return; }
-    if(!state.myReports.pin){ alert('Vui lòng nhập mã PIN.'); return; }
+    if(!state.auth.token && !state.myReports.pin){ alert('Vui lòng nhập mã PIN.'); return; }
     state.myReports.loading=true; state.myReports.error=''; state.myReports.data=null; render();
     try{
-      const res = await fetch(WEB_APP_URL, {method:'POST', body:JSON.stringify({action:'get_my_reports', teacher_id:state.myReports.teacher_id, teacher_pin:state.myReports.pin, period:state.myReports.period})});
+      const res = await fetch(WEB_APP_URL, {method:'POST', body:JSON.stringify({action:'get_my_reports', teacher_id:state.myReports.teacher_id, teacher_pin:state.myReports.pin, auth_token:state.auth.token, source:'teacher_hub', period:state.myReports.period})});
       const json = await res.json();
       if(json.status !== 'success') throw new Error(json.message || 'Không tải được báo cáo.');
       state.myReports.data = json;

@@ -77,7 +77,7 @@
           <option value="">Chọn giáo viên/leader</option>
         </select>
         <div class="grid grid-cols-2 gap-2 mb-2">
-          <input id="myPin" type="password" inputmode="numeric" class="input" placeholder="Mã PIN" />
+          <input id="myPin" type="password" inputmode="numeric" class="input" placeholder="Dùng đăng nhập Hub" disabled />
           <select id="myPeriod" class="input">
             <option value="today">Hôm nay</option>
             <option value="week">Tuần này</option>
@@ -215,6 +215,8 @@
 
 <script>
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzse_WK_1LYurscgU2TQTfKnTckkdGsJLHIc_zxJIaTXbR6jryPFoLJeT3n5j1bPTNm5w/exec";
+const TRAINING_BACKEND_URL = "https://script.google.com/macros/s/AKfycbz6U054D9DYh02IEYU9oD9ssDgdxY2XjZz9gsmmW-TG2SnpqhMm1ZHhZQhA3J12DfWd/exec";
+const HUB_URL = "https://sunbotvietnam.github.io/app/";
 
 const quotes = [
   "Mỗi khoảnh khắc thật là một bằng chứng giáo dục.",
@@ -230,9 +232,40 @@ const quotes = [
 let CONFIG = { schools: [], classes: [], teachers: [], lessons: [] };
 let CURRENT_TAB = "class";
 let LAST_RECEIPT = null;
+let HUB_AUTH = {
+  token: localStorage.getItem("sbtp_token") || "",
+  user: JSON.parse(localStorage.getItem("sbtp_user") || "null"),
+  teacherProfile: null,
+  isAdmin: false
+};
 
 document.getElementById("quote").textContent = quotes[Math.floor(Math.random() * quotes.length)];
 window.addEventListener("load", init);
+
+function showAuthRequired() {
+  document.getElementById("app").innerHTML = `<div class="min-h-screen flex items-center justify-center p-5 bg-orange-50"><div class="bg-white border border-orange-100 rounded-3xl p-6 shadow-xl max-w-sm w-full text-center"><img src="https://static.sunbot.vn/static/images/lesson/11461/logo-sunbot-1.png" class="w-16 h-16 mx-auto rounded-2xl bg-orange-50 p-2" /><h1 class="mt-4 text-2xl font-black text-gray-900">Cần đăng nhập Sunbot</h1><p class="mt-2 text-sm text-gray-500 leading-relaxed">Vui lòng đăng nhập Teacher Hub trước, sau đó app sẽ tự nhận giáo viên và mở Hành trình Sunbot.</p><button onclick="location.href='${HUB_URL}'" class="mt-5 w-full h-12 rounded-2xl bg-orange-500 text-white font-black">Về Teacher Hub</button></div></div>`;
+}
+function postTraining(payload){return fetch(TRAINING_BACKEND_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)}).then(async res=>{const text=await res.text(); try{return JSON.parse(text)}catch(e){throw new Error(text||"Không đọc được phản hồi đăng nhập")}})}
+function displayTeacherName(name,id){const rawName=String(name||""), rawId=String(id||""); if(rawId.toUpperCase()==="GV-0016"||rawName.toLowerCase().includes("nguyễn tường vân")||rawName.toLowerCase().includes("nguyen tuong van"))return "Giáo viên Test"; return rawName}
+function hubTeacherCandidates(){const u=HUB_AUTH.user||{}, p=HUB_AUTH.teacherProfile||{}; return [p.TeacherID,u.TeacherID,u.teacher_id,u.UserID,u.Username,u.username,u.Email,u.email,p.FullName,u.FullName].filter(Boolean).map(x=>String(x).toLowerCase())}
+function roleText(){const u=HUB_AUTH.user||{}; return String(u.PermissionGroupID||u.role_id||u.Role||u.role||"").toUpperCase()}
+function isHubAdmin(){const r=roleText(); return r.includes("ADMIN")||r.includes("CEO")||r.includes("STA_ADMIN")}
+async function syncHubAuth(){
+  if(!HUB_AUTH.token) return false;
+  try{
+    const r=await postTraining({action:"sync_teacher_portal",token:HUB_AUTH.token,source:"impact_app"});
+    if(!r.success) throw new Error(r.message||"Phiên đăng nhập không hợp lệ");
+    HUB_AUTH.teacherProfile=r.teacherProfile||{};
+    HUB_AUTH.isAdmin=!!r.isAdmin||isHubAdmin();
+    return true;
+  }catch(e){
+    localStorage.removeItem("sbtp_token");
+    localStorage.removeItem("sbtp_user");
+    localStorage.removeItem("sbtp_permissions");
+    HUB_AUTH.token="";
+    return false;
+  }
+}
 
 function showLoading(on, text) {
   const el = document.getElementById("loadStatus");
@@ -253,6 +286,9 @@ function showMessage(text, type="ok") {
 }
 
 async function init() {
+  if(!HUB_AUTH.token){ showAuthRequired(); return; }
+  const ok = await syncHubAuth();
+  if(!ok){ showAuthRequired(); return; }
   showLoading(true, "Vui lòng chờ hệ thống tải danh mục...");
   try {
     const cache = localStorage.getItem("sunbot_impact_config_v1");
@@ -278,10 +314,12 @@ async function init() {
 }
 
 function renderConfig() {
+  CONFIG.teachers = (CONFIG.teachers || []).map(t => Object.assign({}, t, { teacher_name: displayTeacherName(t.teacher_name, t.teacher_id) }));
   fillSelect("teacherSelect", CONFIG.teachers || [], "teacher_id", "teacher_name", "Chọn giáo viên/leader");
   fillSelect("myTeacherSelect", CONFIG.teachers || [], "teacher_id", "teacher_name", "Chọn giáo viên/leader");
   fillSelect("schoolSelect", CONFIG.schools || [], "school_id", "school_name", "Chọn trường");
   fillLessons();
+  applyHubTeacherMapping();
 }
 
 function fillSelect(id, rows, valueKey, labelKey, placeholder) {
@@ -305,6 +343,25 @@ function fillLessons() {
     opt.textContent = `${l.lesson_code || ""} — ${l.lesson_name || ""}`;
     lesson.appendChild(opt);
   });
+}
+
+function applyHubTeacherMapping() {
+  const candidates = hubTeacherCandidates();
+  const matched = (CONFIG.teachers || []).find(t => candidates.includes(String(t.teacher_id || "").toLowerCase()) || candidates.includes(String(t.teacher_name || "").toLowerCase()));
+  if(!matched) return;
+  ["teacherSelect","myTeacherSelect"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = matched.teacher_id || "";
+  });
+  if(!HUB_AUTH.isAdmin) {
+    ["teacherSelect","myTeacherSelect"].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) {
+        el.disabled = true;
+        el.classList.add("bg-orange-50","text-orange-700","font-bold");
+      }
+    });
+  }
 }
 
 function selectedTeacher() {
@@ -442,12 +499,14 @@ async function loadMyImpactSubmissions() {
 
   try {
     if (!teacherId) throw new Error("Vui lòng chọn giáo viên/leader.");
-    if (!pin) throw new Error("Vui lòng nhập mã PIN.");
+    if (!HUB_AUTH.token && !pin) throw new Error("Vui lòng nhập mã PIN.");
 
     resultBox.innerHTML = `<div class="hint">Đang tải hồ sơ...</div>`;
     const out = await post("get_my_impact_submissions", null, {
       teacher_id: teacherId,
       teacher_pin: pin,
+      auth_token: HUB_AUTH.token,
+      source: "impact_app",
       period
     });
     const data = out.result || {};
