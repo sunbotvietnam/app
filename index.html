@@ -233,8 +233,10 @@
   function hubRoleRaw(){ const u=state.auth.user||{}; return String(u.PermissionGroupID||u.role_id||u.Role||u.role||'').toUpperCase().trim(); }
   function currentTenantId(){
     const u=state.auth.user||{}, p=state.auth.teacherProfile||{};
-    const raw = String(u.tenant_id||u.primary_tenant_id||p.tenant_id||p.primary_tenant_id||u.Team||'').trim().toUpperCase();
-    if(raw && /^(HEAD|SCHOOL_|PARTNER_|FRANCHISE_)/.test(raw)) return raw;
+    const explicit = String(u.tenant_id||u.primary_tenant_id||p.tenant_id||p.primary_tenant_id||'').trim().toUpperCase();
+    if(explicit) return explicit;
+    const raw = String(u.Team||p.Team||'').trim().toUpperCase();
+    if(raw && (/^(HEAD|DEMO|SCHOOL_|PARTNER_|FRANCHISE_)/.test(raw))) return raw;
     return DEFAULT_TENANT_ID;
   }
   function currentSchoolYearId(){
