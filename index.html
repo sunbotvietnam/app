@@ -29,13 +29,15 @@
   // DÁN LINK WEB APP URL CỦA APPS SCRIPT V3 VÀO ĐÂY
   // Ví dụ: https://script.google.com/macros/s/xxx/exec
   // =========================================================
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwrip9Wr5GgS8941Pur9DhJmYUodIjyNX3DJMmmz2Vx1I95xlDEfu2LKhDSTYxo9PNvmg/exec";
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzJXZEuLSLdY7C-D6wxeuAReE6SlPVHy7p2HXoNrTUn11CMEVSBCQzRr92rj7wO0aFu/exec";
   const TRAINING_BACKEND_URL = "https://script.google.com/macros/s/AKfycbz6U054D9DYh02IEYU9oD9ssDgdxY2XjZz9gsmmW-TG2SnpqhMm1ZHhZQhA3J12DfWd/exec";
   const EVALUATION_APP_URL = "https://sunbotvietnam.github.io/report/";
   const IMPACT_APP_URL = "https://sunbotvietnam.github.io/app/impact/";
   const ACADEMY_APP_URL = "https://sunbotvietnam.github.io/app/training/";
   const DEFAULT_INTERNAL_CENTER_URL = "https://app.notion.com/p/T-NG-SUNBOT-TRUNG-T-M-I-U-H-NG-N-I-B-317bb9c855e880c399bae4355efdb1f5";
   const APP_VERSION = "teacher-hub-v1-training-auth-2026-07";
+  const DEFAULT_TENANT_ID = "HEAD";
+  const DEFAULT_SCHOOL_YEAR_ID = "SY_2026_2027";
   const MAX_IMAGE_PX = 900;
   const IMAGE_QUALITY = 0.62;
 
@@ -229,6 +231,16 @@
     return rawName;
   }
   function hubRoleRaw(){ const u=state.auth.user||{}; return String(u.PermissionGroupID||u.role_id||u.Role||u.role||'').toUpperCase().trim(); }
+  function currentTenantId(){
+    const u=state.auth.user||{}, p=state.auth.teacherProfile||{};
+    const raw = String(u.tenant_id||u.primary_tenant_id||p.tenant_id||p.primary_tenant_id||u.Team||'').trim().toUpperCase();
+    if(raw && /^(HEAD|SCHOOL_|PARTNER_|FRANCHISE_)/.test(raw)) return raw;
+    return DEFAULT_TENANT_ID;
+  }
+  function currentSchoolYearId(){
+    const u=state.auth.user||{}, p=state.auth.teacherProfile||{};
+    return String(u.school_year_id||u.active_school_year_id||p.school_year_id||p.active_school_year_id||DEFAULT_SCHOOL_YEAR_ID).trim() || DEFAULT_SCHOOL_YEAR_ID;
+  }
   function isHubAdmin(){ const raw=hubRoleRaw(); return raw.includes('ADMIN')||raw.includes('CEO')||raw.includes('STA_ADMIN'); }
   function isSuperAdmin(){
     const raw = hubRoleRaw();
@@ -1283,6 +1295,7 @@
     const childObj = (id) => { const c=state.config.enrollment.find(x=>x.child_id===id)||{}; return {child_id:id,enrollment_id:c.enrollment_id||'',child_name:c.child_name||id,class_id:c.class_id||'',class_name:c.class_name||''}; };
     return {
       app_version: APP_VERSION, action:'submit_report_v2', created_client_at:new Date().toISOString(),
+      tenant_id:currentTenantId(), school_year_id:currentSchoolYearId(),
       teacher_id:d.teacher_id, teacher_name:t.teacher_name||'', school_id:d.school_id, school_name:s.school_name||'', session_date:d.session_date,
       lesson_id:d.lesson_id, lesson_code:l.lesson_code||'', lesson_name:l.lesson_name||'', report_type:d.report_type, session_type:d.report_type === 'EOM' ? 'END_OF_MONTH' : 'REGULAR',
       classes, total_attendance:totalAttendance(), checklist:CHECKLIST.map((x,i)=>({item:x,checked:!!d.checklist[i]})),
@@ -1318,7 +1331,7 @@
     if(!WEB_APP_URL || WEB_APP_URL.includes('PASTE_GOOGLE_APPS_SCRIPT')){ alert('Chưa dán WEB_APP_URL.'); return; }
     state.loading=true; render();
     try{
-      const res = await fetch(WEB_APP_URL, {method:'POST', body:JSON.stringify({action:'send_teacher_receipt', session_id:state.lastReceipt.session_id})});
+      const res = await fetch(WEB_APP_URL, {method:'POST', body:JSON.stringify({action:'send_teacher_receipt', session_id:state.lastReceipt.session_id, tenant_id:currentTenantId(), school_year_id:currentSchoolYearId()})});
       const json = await res.json();
       if(json.status !== 'success') throw new Error(json.message || 'Không gửi được email.');
       alert('Đã gửi biên nhận về email giáo viên.');
@@ -1331,7 +1344,7 @@
     if(!state.auth.token && !state.myReports.pin){ alert('Vui lòng nhập mã PIN.'); return; }
     state.myReports.loading=true; state.myReports.error=''; state.myReports.data=null; render();
     try{
-      const res = await fetch(WEB_APP_URL, {method:'POST', body:JSON.stringify({action:'get_my_reports', teacher_id:state.myReports.teacher_id, teacher_pin:state.myReports.pin, auth_token:state.auth.token, source:'teacher_hub', period:state.myReports.period})});
+      const res = await fetch(WEB_APP_URL, {method:'POST', body:JSON.stringify({action:'get_my_reports', teacher_id:state.myReports.teacher_id, teacher_pin:state.myReports.pin, auth_token:state.auth.token, source:'teacher_hub', period:state.myReports.period, tenant_id:currentTenantId(), school_year_id:currentSchoolYearId()})});
       const json = await res.json();
       if(json.status !== 'success') throw new Error(json.message || 'Không tải được báo cáo.');
       state.myReports.data = json;
@@ -1399,7 +1412,7 @@
     if(cached){ state.config.enrollment = cached; state.enrollmentError=''; render(); return; }
     state.enrollmentLoading = true; state.enrollmentError=''; render();
     try{
-      const url = WEB_APP_URL + '?action=enrollment&class_ids=' + encodeURIComponent(ids.join(','));
+      const url = WEB_APP_URL + '?action=enrollment&class_ids=' + encodeURIComponent(ids.join(',')) + '&tenant_id=' + encodeURIComponent(currentTenantId()) + '&school_year_id=' + encodeURIComponent(currentSchoolYearId());
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 7000);
       const res = await fetch(url, { signal: controller.signal });
@@ -1421,7 +1434,7 @@
       if(!WEB_APP_URL || WEB_APP_URL.includes('PASTE_GOOGLE_APPS_SCRIPT')) throw new Error('Chưa dán WEB_APP_URL. Đang dùng dữ liệu demo.');
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 9000);
-      const res = await fetch(WEB_APP_URL + '?action=config&v=' + Date.now(), { signal: controller.signal });
+      const res = await fetch(WEB_APP_URL + '?action=config&tenant_id=' + encodeURIComponent(currentTenantId()) + '&school_year_id=' + encodeURIComponent(currentSchoolYearId()) + '&v=' + Date.now(), { signal: controller.signal });
       clearTimeout(timer);
       const text = await res.text();
       let json;
