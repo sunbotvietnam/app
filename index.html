@@ -102,7 +102,9 @@
       teacherProfile: null,
       academy: null,
       error: '',
-      loading: false
+      loading: false,
+      loadingMessage: '',
+      loginDraft: { username:'', password:'' }
     },
     hubModule: 'report',
     showAccountAdmin: false,
@@ -138,6 +140,7 @@
     showMyReports: false,
     myReports: { teacher_id:"", pin:"", period:"today", loading:false, error:"", data:null }
   };
+  let hubLoginWaitTimer = null;
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -652,6 +655,22 @@
 
   function renderLogin(){
     const msg = state.auth.error ? `<div class="mt-4 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm font-semibold">${esc(state.auth.error)}</div>` : '';
+    const draft = state.auth.loginDraft || { username:'', password:'' };
+    const waiting = state.auth.loading ? `
+      <div class="mt-4 rounded-2xl border border-orange-100 bg-orange-50 p-4 text-slate-700">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center text-orange-600 shadow-sm">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+          </div>
+          <div>
+            <div class="text-[13px] font-black text-slate-900">${esc(state.auth.loadingMessage || 'Đang kiểm tra tài khoản...')}</div>
+            <div class="text-[12px] leading-snug text-slate-500">Vui lòng giữ nguyên màn hình này. Hệ thống đang kết nối backend Sunbot.</div>
+          </div>
+        </div>
+        <div class="mt-3 h-1.5 rounded-full bg-white overflow-hidden">
+          <div class="h-full w-2/3 rounded-full bg-[#FF6B00] animate-pulse"></div>
+        </div>
+      </div>` : '';
     document.getElementById('app').innerHTML = `
       <div class="min-h-screen px-5 py-8 flex items-center justify-center bg-gradient-to-b from-orange-50 via-white to-slate-100">
         <div class="w-full max-w-md bg-white rounded-[28px] border border-orange-100 shadow-xl shadow-orange-100/60 p-6 fade">
@@ -670,18 +689,21 @@
           <div class="mt-5 space-y-3">
             <div>
               <label class="text-xs font-black text-slate-500 uppercase">ID Sunbot</label>
-              <input id="hubLoginId" class="mt-2 w-full h-12 rounded-2xl border border-orange-100 px-4 outline-none focus:border-orange-400" autocomplete="username" placeholder="Nhập ID/email" />
+              <input id="hubLoginId" class="mt-2 w-full h-12 rounded-2xl border border-orange-100 px-4 outline-none focus:border-orange-400 ${state.auth.loading?'bg-slate-50 text-slate-500':''}" autocomplete="username" placeholder="Nhập ID/email" value="${esc(draft.username || '')}" ${state.auth.loading?'readonly':''} />
             </div>
             <div>
               <label class="text-xs font-black text-slate-500 uppercase">Mật khẩu / PIN</label>
-              <input id="hubLoginPass" type="password" class="mt-2 w-full h-12 rounded-2xl border border-orange-100 px-4 outline-none focus:border-orange-400" autocomplete="current-password" placeholder="Nhập mật khẩu" />
+              <input id="hubLoginPass" type="password" class="mt-2 w-full h-12 rounded-2xl border border-orange-100 px-4 outline-none focus:border-orange-400 ${state.auth.loading?'bg-slate-50 text-slate-500':''}" autocomplete="current-password" placeholder="Nhập mật khẩu" value="${esc(draft.password || '')}" ${state.auth.loading?'readonly':''} />
             </div>
-            <button id="btnHubLogin" class="w-full h-12 rounded-2xl bg-[#FF6B00] text-white font-black shadow-lg shadow-orange-200 active-scale">${state.auth.loading?'Đang đăng nhập...':'Đăng nhập'}</button>
+            <button id="btnHubLogin" class="w-full h-12 rounded-2xl bg-[#FF6B00] text-white font-black shadow-lg shadow-orange-200 active-scale disabled:opacity-80 disabled:active:scale-100" ${state.auth.loading?'disabled':''}>${state.auth.loading?'<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Đang đăng nhập...':'Đăng nhập'}</button>
           </div>
+          ${waiting}
           ${msg}
           <div class="mt-4 text-[12px] leading-relaxed text-slate-500">Nếu chưa có tài khoản hoặc cần đặt lại mật khẩu, vui lòng liên hệ quản trị hệ thống.</div>
         </div>
       </div>`;
+    const id = $('hubLoginId');
+    if(id) id.addEventListener('keydown', e=>{ if(e.key==='Enter') hubLogin(); });
     const pass = $('hubLoginPass');
     if(pass) pass.addEventListener('keydown', e=>{ if(e.key==='Enter') hubLogin(); });
     const btn = $('btnHubLogin');
@@ -989,22 +1011,43 @@
   }
 
   async function hubLogin(){
+    if(state.auth.loading) return;
     const username = norm(($('hubLoginId')||{}).value);
     const password = norm(($('hubLoginPass')||{}).value);
     if(!username || !password){ state.auth.error='Cần nhập ID và mật khẩu.'; renderLogin(); return; }
-    state.auth.loading = true; state.auth.error = ''; renderLogin();
+    if(hubLoginWaitTimer) clearTimeout(hubLoginWaitTimer);
+    state.auth.loading = true;
+    state.auth.error = '';
+    state.auth.loadingMessage = 'Đang kiểm tra tài khoản...';
+    state.auth.loginDraft = { username, password };
+    renderLogin();
+    hubLoginWaitTimer = setTimeout(()=>{
+      if(!state.auth.loading) return;
+      state.auth.loadingMessage = 'Backend đang phản hồi chậm hơn bình thường...';
+      renderLogin();
+      hubLoginWaitTimer = setTimeout(()=>{
+        if(!state.auth.loading) return;
+        state.auth.loadingMessage = 'Vẫn đang kết nối, vui lòng chờ thêm một chút.';
+        renderLogin();
+      }, 7000);
+    }, 4500);
     try{
       const r = await postText(TRAINING_BACKEND_URL,{action:'login',username,password,source:'teacher_hub'});
       if(!r.success) throw new Error(r.message || 'Sai ID hoặc mật khẩu.');
       saveAuth(r);
       await syncHubProfile();
+      state.auth.loginDraft = { username:'', password:'' };
       render();
     } catch(err){
       clearAuth();
+      state.auth.loginDraft = { username, password };
       state.auth.error = err.message || String(err);
-      renderLogin();
     } finally {
+      if(hubLoginWaitTimer) clearTimeout(hubLoginWaitTimer);
+      hubLoginWaitTimer = null;
       state.auth.loading = false;
+      state.auth.loadingMessage = '';
+      if(!state.auth.token) renderLogin();
     }
   }
   function hubLogout(){ clearAuth(); renderLogin(); }
