@@ -212,6 +212,14 @@
   function todayISO(){ return new Date().toISOString().slice(0,10); }
   function isTruthy(v){ return v === true || String(v).toUpperCase() === 'TRUE' || String(v).toLowerCase() === 'active' || String(v).trim() === ''; }
   function postText(url, payload){ return fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).then(async res=>{const text=await res.text(); try{return JSON.parse(text)}catch(e){throw new Error(text||'Không đọc được phản hồi hệ thống')}}); }
+  function isUnsupportedActionError(msg){
+    return /action\s+kh[oô]ng\s+[đd][uư][oợ]c\s+h[oỗ]\s+tr[oợ]|action\s+khong\s+duoc\s+ho\s+tro|unsupported\s+action|unknown\s+action/i.test(String(msg || ''));
+  }
+  function backendErrorText(err, fallback){
+    const msg = err && err.message ? err.message : String(err || '');
+    if(/phi[eê]n|token|unauthorized|forbidden|quy[eề]n|permission/i.test(msg)) return msg || 'Phiên đăng nhập hoặc quyền truy cập chưa hợp lệ. Vui lòng đăng nhập lại bằng tài khoản admin.';
+    return msg || fallback;
+  }
   function hubUserName(){ const u=state.auth.user||{}, p=state.auth.teacherProfile||{}; return p.FullName||u.FullName||u.display_name||u.Username||u.username||'Giáo viên Sunbot'; }
   function hubTeacherId(){ const u=state.auth.user||{}, p=state.auth.teacherProfile||{}; return p.TeacherID||u.TeacherID||u.teacher_id||u.UserID||u.Username||u.username||''; }
   function displayTeacherName(name, id){
@@ -1135,8 +1143,8 @@
       await loadTenantsV2();
     }catch(err){
       const rawMsg = err.message || String(err);
-      const unsupported = /không hỗ trợ|khong ho tro|unsupported|unknown action|action/i.test(rawMsg);
-      const msg = unsupported ? 'Backend V2 chưa kích hoạt action provision_tenant_v2. Yêu cầu chưa được ghi vào TENANTS; cần bổ sung Apps Script trước khi tạo tenant chính thức.' : rawMsg;
+      const unsupported = isUnsupportedActionError(rawMsg);
+      const msg = unsupported ? 'Backend V2 chưa kích hoạt action provision_tenant_v2. Yêu cầu chưa được ghi vào TENANTS; cần bổ sung Apps Script trước khi tạo tenant chính thức.' : backendErrorText(err, 'Chưa tạo được tenant trên backend.');
       rememberTenantProvision({
         status: 'FAILED',
         statusText: 'Chưa tạo được tenant trên backend',
@@ -1164,10 +1172,10 @@
     }catch(err){
       state.systemAdmin.tenants = null;
       const msg = err.message || String(err);
-      const unsupported = /không hỗ trợ|khong ho tro|unsupported|unknown action|action/i.test(msg);
+      const unsupported = isUnsupportedActionError(msg);
       state.systemAdmin.listError = unsupported
         ? 'Backend V2 chưa kích hoạt action get_tenants_v2. Hiện app chỉ hiển thị lịch sử thao tác trên máy này; cần bổ sung Apps Script để đọc danh sách chính thức.'
-        : 'Chưa đọc được danh sách tenant từ backend. Hiện app chỉ hiển thị lịch sử thao tác trên máy này.';
+        : backendErrorText(err, 'Chưa đọc được danh sách tenant từ backend. Hiện app chỉ hiển thị lịch sử thao tác trên máy này.');
     }finally{
       state.systemAdmin.listLoading = false;
       render();
