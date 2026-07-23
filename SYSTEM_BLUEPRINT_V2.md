@@ -634,6 +634,7 @@ Dung cho SUPER_ADMIN tao tenant/truong/doi tac tu frontend.
 
 ```text
 provision_tenant_v2(token, super_code, tenant, adminUser)
+get_tenants_v2(token)
 test_tenant_backend(token, super_code, tenant_id)
 update_tenant_backend_url(token, super_code, tenant_id, data_backend_url)
 archive_tenant(token, super_code, tenant_id)

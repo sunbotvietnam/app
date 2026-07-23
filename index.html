@@ -108,7 +108,7 @@
     hubSettings: loadHubSettings(),
     hubSettingsAdmin: { loading:false, error:'', ok:'' },
     accountAdmin: { loading:false, error:'', ok:'' },
-    systemAdmin: { loading:false, error:'', ok:'', last:null, log: loadTenantProvisionLog() },
+    systemAdmin: { loading:false, listLoading:false, error:'', ok:'', listError:'', last:null, log: loadTenantProvisionLog(), tenants:null },
     loading: false,
     configLoading: true,
     enrollmentLoading: false,
@@ -171,6 +171,34 @@
   function formatTime(iso){
     if(!iso) return '';
     try{ return new Date(iso).toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'}); }catch(e){ return iso; }
+  }
+  function tenantRowsFromLog(){
+    const seen = new Set();
+    return (state.systemAdmin.log || []).filter(x=>{
+      const id = String(x.tenant_id || '').trim();
+      if(!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    }).map(x=>({
+      tenant_id: x.tenant_id,
+      tenant_name: x.tenant_name || '',
+      tenant_type: x.tenant_type || '',
+      status: x.status === 'CONFIRMED' ? 'CONFIRMED_LOCAL' : x.status,
+      source: 'local_log',
+      updated_at: x.at
+    }));
+  }
+  function normalizeTenantRows(rows){
+    return (rows || []).map(t=>({
+      tenant_id: t.tenant_id || t.TenantID || t.id || '',
+      tenant_name: t.tenant_name || t.TenantName || t.name || '',
+      tenant_type: t.tenant_type || t.TenantType || t.type || '',
+      status: t.status || t.Status || '',
+      active_school_year_id: t.active_school_year_id || t.ActiveSchoolYearID || t.school_year_id || '',
+      backend_mode: t.backend_mode || t.BackendMode || '',
+      data_backend_url: t.data_backend_url || t.DataBackendUrl || t.backend_url || '',
+      updated_at: t.updated_at || t.UpdatedAt || t.created_at || ''
+    })).filter(t=>t.tenant_id);
   }
   function todayISO(){ return new Date().toISOString().slice(0,10); }
   function isTruthy(v){ return v === true || String(v).toUpperCase() === 'TRUE' || String(v).toLowerCase() === 'active' || String(v).trim() === ''; }
@@ -767,6 +795,7 @@
           <button id="btnProvisionTenant" class="h-10 rounded-xl bg-orange-500 text-white text-[13px] font-bold active-scale">${admin.loading?'Đang tạo...':'Tạo tenant'}</button>
           <button id="btnCreateHeadTenant" class="h-10 rounded-xl bg-slate-900 text-white text-[13px] font-bold active-scale">Khởi tạo HEAD</button>
         </div>
+        ${renderTenantListPanel()}
         ${admin.loading?`<div class="p-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-800 text-[12px] flex gap-2 items-start"><div class="loader shrink-0 !w-5 !h-5"></div><div><b>Đang gửi yêu cầu tạo tenant...</b><br>Vui lòng chờ phản hồi backend trước khi bấm lại.</div></div>`:''}
         ${admin.ok?`<div class="p-2 rounded-lg bg-green-50 text-green-700 text-[12px]">${esc(admin.ok)}</div>`:''}
         ${admin.error?`<div class="p-2 rounded-lg bg-red-50 text-red-700 text-[12px]">${esc(admin.error)}</div>`:''}
@@ -784,6 +813,36 @@
         </details>`:''}
         <button id="btnCloseSystemAdmin" class="h-10 rounded-xl bg-white border border-gray-200 text-gray-600 text-[13px] font-bold active-scale">Đóng quản trị hệ thống</button>
       </div>`)}`;
+  }
+
+  function renderTenantListPanel(){
+    const admin = state.systemAdmin;
+    const backendRows = normalizeTenantRows(admin.tenants || []);
+    const localRows = tenantRowsFromLog();
+    const rows = backendRows.length ? backendRows : localRows;
+    const sourceText = backendRows.length ? 'Dữ liệu từ backend' : (localRows.length ? 'Tạm hiển thị từ lịch sử thao tác trên máy này' : 'Chưa có dữ liệu tenant để hiển thị');
+    return `<div class="rounded-xl border border-gray-100 bg-white p-3">
+      <div class="flex items-center justify-between gap-2">
+        <div>
+          <div class="text-[12px] font-black text-gray-500 uppercase">Tenant hiện có</div>
+          <div class="text-[11px] text-gray-400 mt-0.5">${esc(sourceText)}</div>
+        </div>
+        <button id="btnLoadTenants" class="h-9 px-3 rounded-xl bg-slate-100 text-slate-700 text-[12px] font-bold active-scale">${admin.listLoading?'Đang tải...':'Tải danh sách'}</button>
+      </div>
+      ${admin.listError?`<div class="mt-2 p-2 rounded-lg bg-amber-50 text-amber-800 text-[12px]">${esc(admin.listError)}</div>`:''}
+      ${rows.length?`<div class="mt-2 divide-y divide-gray-100">
+        ${rows.slice(0,12).map(t=>`<div class="py-2 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-[13px] font-black text-slate-900 truncate">${esc(t.tenant_id)}</div>
+            <div class="text-[11px] text-slate-500 truncate">${esc(t.tenant_name || t.source || 'Chưa có tên')}</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-[11px] font-black text-slate-600">${esc(t.tenant_type || '-')}</div>
+            <div class="text-[10px] text-slate-400">${esc(t.status || t.active_school_year_id || '')}</div>
+          </div>
+        </div>`).join('')}
+      </div>`:`<div class="mt-2 rounded-lg bg-gray-50 p-3 text-[12px] text-gray-500">Chưa tải được danh sách tenant. Bấm “Tải danh sách” để đọc từ backend.</div>`}
+    </div>`;
   }
 
   async function hubLogin(){
@@ -993,6 +1052,7 @@
       });
       state.systemAdmin.ok = 'Backend đã xác nhận tenant ' + payload.tenant.tenant_id + '.';
       await syncHubProfile();
+      await loadTenantsV2();
     }catch(err){
       const msg = err.message || String(err);
       rememberTenantProvision({
@@ -1008,6 +1068,25 @@
       render();
     }
   }
+  async function loadTenantsV2(){
+    if(!isSuperAdmin()) return;
+    state.systemAdmin.listLoading = true;
+    state.systemAdmin.listError = '';
+    render();
+    try{
+      const r = await postText(TRAINING_BACKEND_URL,{action:'get_tenants_v2',token:state.auth.token,source:'teacher_hub_super_admin'});
+      if(!r.success) throw new Error(r.message || 'Backend chưa hỗ trợ đọc danh sách tenant V2.');
+      const rows = r.tenants || r.rows || r.data || [];
+      state.systemAdmin.tenants = normalizeTenantRows(rows);
+      if(!state.systemAdmin.tenants.length) state.systemAdmin.listError = 'Backend trả thành công nhưng chưa có tenant nào trong TENANTS.';
+    }catch(err){
+      state.systemAdmin.tenants = null;
+      state.systemAdmin.listError = 'Chưa đọc được từ backend: ' + (err.message || String(err)) + '. App đang hiển thị lịch sử thao tác trên máy nếu có.';
+    }finally{
+      state.systemAdmin.listLoading = false;
+      render();
+    }
+  }
 
   function bindEvents(){
     const on = (id, ev, fn) => { const el=$(id); if(el) el.addEventListener(ev, fn); };
@@ -1020,6 +1099,7 @@
     on('btnCloseHubSettings','click',()=>{ state.showHubSettings=false; state.hubSettingsAdmin.error=''; state.hubSettingsAdmin.ok=''; render(); });
     on('btnProvisionTenant','click',()=>provisionTenantV2());
     on('btnCreateHeadTenant','click',()=>provisionTenantV2('HEAD'));
+    on('btnLoadTenants','click',loadTenantsV2);
     on('btnCloseSystemAdmin','click',()=>{ state.showSystemAdmin=false; state.systemAdmin.error=''; state.systemAdmin.ok=''; render(); });
     document.querySelectorAll('[data-hub-action]').forEach(el=>el.addEventListener('click',()=>handleHubAction(el.dataset.hubAction)));
     on('btnImpact','click',()=>handleHubAction('impact'));
