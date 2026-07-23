@@ -726,7 +726,7 @@
         ${hubCard('Học viện','Tài liệu, bài tập và tiến độ đào tạo giáo viên.','fa-graduation-cap','amber','academy','ID chung')}
         ${hubCard('Thu nhập của tôi','Theo dõi số buổi dạy và đối soát khi hoàn thiện.','fa-wallet','emerald','payroll','Đang xây')}
         ${isHubAdmin()?hubCard('Tài khoản','Cấp mới hoặc đổi ID/mật khẩu cho giáo viên.','fa-user-gear','slate','accounts','Admin'):''}
-        ${isSuperAdmin()?hubCard('Hệ thống','Tạo tenant, năm học và cấu hình backend V2.','fa-sitemap','slate','system','1906'):''}
+        ${isSuperAdmin()?hubCard('Hệ thống','Tạo đơn vị vận hành, năm học và cấu hình backend V2.','fa-sitemap','slate','system','1906'):''}
       </div>`;
   }
 
@@ -749,7 +749,7 @@
           <div>
             <div class="text-[11px] font-black tracking-[.16em] uppercase opacity-80">Quản trị vận hành</div>
             <div class="mt-1 text-xl font-black leading-tight">Sunbot Platform</div>
-            <div class="mt-1 text-[12px] text-white/75 leading-snug">Quản lý hệ thống, tài khoản, tenant và cấu hình nội bộ.</div>
+            <div class="mt-1 text-[12px] text-white/75 leading-snug">Quản lý hệ thống, tài khoản, đơn vị vận hành và cấu hình nội bộ.</div>
           </div>
           <button data-hub-action="settings" class="w-10 h-10 rounded-2xl bg-white/15 border border-white/25 active-scale" title="Cấu hình Hub"><i class="fa-solid fa-sliders"></i></button>
         </div>
@@ -774,7 +774,7 @@
       </div>
       <div class="mx-4 mt-3 grid grid-cols-2 gap-2">
         ${hubCard('Cấu hình Hub','Đổi link trung tâm điều hành và các thiết lập chung.','fa-sliders','slate','settings','Admin')}
-        ${isSuperAdmin()?hubCard('Tenant hiện có','Xem trạng thái backend V2 và lịch sử tenant.','fa-building-circle-check','slate','system','V2'):''}
+        ${isSuperAdmin()?hubCard('Đơn vị hiện có','Xem trạng thái backend V2 và lịch sử đơn vị vận hành.','fa-building-circle-check','slate','system','V2'):''}
       </div>`;
   }
 
@@ -844,22 +844,22 @@
     if(!state.showSystemAdmin || !isSuperAdmin()) return '';
     const admin = state.systemAdmin;
     const last = admin.last || (admin.log && admin.log[0]);
-    return `${section('Quản trị hệ thống V2', 'Chỉ SUPER_ADMIN/legacy admin thấy mục này. Dùng để tạo tenant, trường/đối tác và cấu hình năm học.')}
+    return `${section('Quản trị hệ thống V2', 'Chỉ SUPER_ADMIN/legacy admin thấy mục này. Dùng để tạo đơn vị vận hành, trường/đối tác và cấu hình năm học.')}
       ${card(`<div class="p-3 space-y-4">
         <div class="rounded-xl bg-slate-50 border border-slate-100 p-3 text-[12px] text-slate-600 leading-relaxed">
-          Đây là bước chuẩn bị multi-tenant. Nếu backend chưa có action V2, app sẽ không ghi dữ liệu và sẽ báo rõ để bổ sung Apps Script tiếp.
+          Đây là bước chuẩn bị hệ thống đa đơn vị. Nếu backend chưa có action V2, app sẽ không ghi dữ liệu và sẽ báo rõ để bổ sung Apps Script tiếp.
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <input id="sysTenantId" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400 uppercase" placeholder="Mã tenant: HEAD / SCHOOL_ABC" />
-          <input id="sysTenantName" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Tên tenant/trường/đối tác" />
+          <input id="sysTenantId" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400 uppercase" placeholder="Mã đơn vị: HEAD / SCHOOL_ABC" />
+          <input id="sysTenantName" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Tên đơn vị/trường/đối tác" />
           <select id="sysTenantType" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
-            <option value="SCHOOL">School</option>
-            <option value="PARTNER">Partner</option>
-            <option value="FRANCHISE">Franchise</option>
+            <option value="SCHOOL">Trường</option>
+            <option value="PARTNER">Đối tác</option>
+            <option value="FRANCHISE">Nhượng quyền</option>
             <option value="HEAD">Head</option>
           </select>
           <input id="sysRegion" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Khu vực: HN/NA/..." />
-          <input id="sysSchoolYear" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" value="SY_2025_2026" placeholder="Năm học active" />
+          <input id="sysSchoolYear" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" value="SY_2026_2027" placeholder="Năm học active" />
           <select id="sysBackendMode" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
             <option value="SHARED">Dùng backend chung</option>
             <option value="DEDICATED">Backend riêng</option>
@@ -867,34 +867,34 @@
         </div>
         <input id="sysBackendUrl" class="w-full h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Data backend URL nếu dùng backend riêng hoặc đã có sẵn" />
         <div class="border-t border-gray-100 pt-4">
-          <div class="text-[12px] font-black text-gray-500 uppercase">Admin tenant ban đầu</div>
+          <div class="text-[12px] font-black text-gray-500 uppercase">Admin đơn vị ban đầu</div>
           <div class="grid grid-cols-2 gap-2 mt-2">
             <input id="sysAdminName" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Tên admin trường/đối tác" />
             <input id="sysAdminId" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="ID/email admin" />
             <input id="sysAdminPass" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Mật khẩu/PIN ban đầu" />
             <select id="sysAdminRole" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
-              <option value="TENANT_ADMIN">TENANT_ADMIN</option>
-              <option value="SCHOOL_VIEWER">SCHOOL_VIEWER</option>
-              <option value="PARTNER_VIEWER">PARTNER_VIEWER</option>
+              <option value="TENANT_ADMIN">Admin đơn vị</option>
+              <option value="SCHOOL_VIEWER">Tài khoản xem của trường</option>
+              <option value="PARTNER_VIEWER">Tài khoản xem của đối tác</option>
             </select>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <button id="btnProvisionTenant" class="h-10 rounded-xl bg-orange-500 text-white text-[13px] font-bold active-scale">${admin.loading?'Đang tạo...':'Tạo tenant'}</button>
+          <button id="btnProvisionTenant" class="h-10 rounded-xl bg-orange-500 text-white text-[13px] font-bold active-scale">${admin.loading?'Đang tạo...':'Tạo đơn vị'}</button>
           <button id="btnCreateHeadTenant" class="h-10 rounded-xl bg-slate-900 text-white text-[13px] font-bold active-scale">Khởi tạo HEAD</button>
         </div>
         ${renderTenantListPanel()}
-        ${admin.loading?`<div class="p-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-800 text-[12px] flex gap-2 items-start"><div class="loader shrink-0 !w-5 !h-5"></div><div><b>Đang gửi yêu cầu tạo tenant...</b><br>Vui lòng chờ phản hồi backend trước khi bấm lại.</div></div>`:''}
+        ${admin.loading?`<div class="p-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-800 text-[12px] flex gap-2 items-start"><div class="loader shrink-0 !w-5 !h-5"></div><div><b>Đang gửi yêu cầu tạo đơn vị...</b><br>Vui lòng chờ phản hồi backend trước khi bấm lại.</div></div>`:''}
         ${admin.ok?`<div class="p-2 rounded-lg bg-green-50 text-green-700 text-[12px]">${esc(admin.ok)}</div>`:''}
         ${admin.error?`<div class="p-2 rounded-lg bg-red-50 text-red-700 text-[12px]">${esc(admin.error)}</div>`:''}
         ${last?`<div class="rounded-xl border ${last.status==='CONFIRMED'?'border-green-100 bg-green-50':last.status==='FAILED'?'border-red-100 bg-red-50':'border-amber-100 bg-amber-50'} p-3 text-[12px] leading-relaxed">
           <div class="font-black ${last.status==='CONFIRMED'?'text-green-800':last.status==='FAILED'?'text-red-800':'text-amber-800'}">${esc(last.statusText || 'Trạng thái provision')}</div>
-          <div class="mt-1 text-slate-600">Tenant: <b>${esc(last.tenant_id || '')}</b> · ${esc(last.tenant_type || '')} · ${esc(formatTime(last.at))}</div>
+          <div class="mt-1 text-slate-600">Đơn vị: <b>${esc(last.tenant_id || '')}</b> · ${esc(last.tenant_type || '')} · ${esc(formatTime(last.at))}</div>
           ${last.message?`<div class="mt-1 text-slate-600">${esc(last.message)}</div>`:''}
           ${last.backendId?`<div class="mt-1 text-slate-500">Backend ID: ${esc(last.backendId)}</div>`:''}
         </div>`:''}
         ${(admin.log||[]).length>1?`<details class="rounded-xl border border-gray-100 bg-white p-3">
-          <summary class="text-[12px] font-black text-gray-500 cursor-pointer">Lịch sử tạo tenant gần đây</summary>
+          <summary class="text-[12px] font-black text-gray-500 cursor-pointer">Lịch sử tạo đơn vị gần đây</summary>
           <div class="mt-2 divide-y divide-gray-100">
             ${admin.log.slice(1,6).map(x=>`<div class="py-2 text-[12px] text-gray-600"><b>${esc(x.tenant_id||'')}</b> · ${esc(x.statusText||x.status||'')} · ${esc(formatTime(x.at))}</div>`).join('')}
           </div>
@@ -908,11 +908,11 @@
     const backendRows = normalizeTenantRows(admin.tenants || []);
     const localRows = tenantRowsFromLog();
     const rows = backendRows.length ? backendRows : localRows;
-    const sourceText = backendRows.length ? 'Dữ liệu từ backend' : (localRows.length ? 'Tạm hiển thị từ lịch sử thao tác trên máy này' : 'Chưa có dữ liệu tenant để hiển thị');
+    const sourceText = backendRows.length ? 'Dữ liệu từ backend' : (localRows.length ? 'Tạm hiển thị từ lịch sử thao tác trên máy này' : 'Chưa có dữ liệu đơn vị để hiển thị');
     return `<div class="rounded-xl border border-gray-100 bg-white p-3">
       <div class="flex items-center justify-between gap-2">
         <div>
-          <div class="text-[12px] font-black text-gray-500 uppercase">Tenant hiện có</div>
+          <div class="text-[12px] font-black text-gray-500 uppercase">Đơn vị hiện có</div>
           <div class="text-[11px] text-gray-400 mt-0.5">${esc(sourceText)}</div>
         </div>
         <button id="btnLoadTenants" class="h-9 px-3 rounded-xl bg-slate-100 text-slate-700 text-[12px] font-bold active-scale">${admin.listLoading?'Đang tải...':'Tải danh sách'}</button>
@@ -929,7 +929,7 @@
             <div class="text-[10px] text-slate-400">${esc(t.status || t.active_school_year_id || '')}</div>
           </div>
         </div>`).join('')}
-      </div>`:`<div class="mt-2 rounded-lg bg-gray-50 p-3 text-[12px] text-gray-500">Chưa tải được danh sách tenant. Bấm “Tải danh sách” để đọc từ backend.</div>`}
+      </div>`:`<div class="mt-2 rounded-lg bg-gray-50 p-3 text-[12px] text-gray-500">Chưa tải được danh sách đơn vị. Bấm “Tải danh sách” để đọc từ backend.</div>`}
     </div>`;
   }
 
@@ -1078,7 +1078,7 @@
       tenant_name: norm(($('sysTenantName')||{}).value),
       tenant_type: (($('sysTenantType')||{}).value || 'SCHOOL'),
       default_region: norm(($('sysRegion')||{}).value),
-      active_school_year_id: norm(($('sysSchoolYear')||{}).value) || 'SY_2025_2026',
+      active_school_year_id: norm(($('sysSchoolYear')||{}).value) || 'SY_2026_2027',
       backend_mode: (($('sysBackendMode')||{}).value || 'SHARED'),
       data_backend_url: norm(($('sysBackendUrl')||{}).value)
     };
@@ -1098,12 +1098,12 @@
       set('sysTenantName','Sunbot Head');
       set('sysTenantType','HEAD');
       set('sysRegion','ALL');
-      set('sysSchoolYear','SY_2025_2026');
+      set('sysSchoolYear','SY_2026_2027');
       set('sysBackendMode','SHARED');
     }
     const payload = collectTenantProvisionPayload();
     if(!payload.tenant.tenant_id || !payload.tenant.tenant_name){
-      state.systemAdmin.error = 'Cần nhập mã tenant và tên tenant.';
+      state.systemAdmin.error = 'Cần nhập mã đơn vị và tên đơn vị.';
       state.systemAdmin.ok = '';
       render();
       return;
@@ -1129,25 +1129,25 @@
     render();
     try{
       const r = await postText(TRAINING_BACKEND_URL,{action:'provision_tenant_v2',token:state.auth.token,super_code,tenant:payload.tenant,adminUser:payload.adminUser,source:'teacher_hub_super_admin'});
-      if(!r.success) throw new Error(r.message || 'Backend chưa hỗ trợ provision tenant V2.');
+      if(!r.success) throw new Error(r.message || 'Backend chưa hỗ trợ tạo đơn vị V2.');
       rememberTenantProvision({
         status: 'CONFIRMED',
-        statusText: 'Backend đã xác nhận tạo/cập nhật tenant',
+        statusText: 'Backend đã xác nhận tạo/cập nhật đơn vị',
         tenant_id: payload.tenant.tenant_id,
         tenant_type: payload.tenant.tenant_type,
         backendId: r.tenant_id || r.tenantId || r.id || payload.tenant.tenant_id,
-        message: r.message || 'Tenant đã được backend xác nhận. Có thể kiểm tra trong bảng TENANTS/USER_TENANT_ACCESS nếu backend đã ghi sheet.'
+        message: r.message || 'Đơn vị đã được backend xác nhận. Có thể kiểm tra trong bảng TENANTS/USER_TENANT_ACCESS nếu backend đã ghi sheet.'
       });
-      state.systemAdmin.ok = 'Backend đã xác nhận tenant ' + payload.tenant.tenant_id + '.';
+      state.systemAdmin.ok = 'Backend đã xác nhận đơn vị ' + payload.tenant.tenant_id + '.';
       await syncHubProfile();
       await loadTenantsV2();
     }catch(err){
       const rawMsg = err.message || String(err);
       const unsupported = isUnsupportedActionError(rawMsg);
-      const msg = unsupported ? 'Backend V2 chưa kích hoạt action provision_tenant_v2. Yêu cầu chưa được ghi vào TENANTS; cần bổ sung Apps Script trước khi tạo tenant chính thức.' : backendErrorText(err, 'Chưa tạo được tenant trên backend.');
+      const msg = unsupported ? 'Backend V2 chưa kích hoạt action provision_tenant_v2. Yêu cầu chưa được ghi vào TENANTS; cần bổ sung Apps Script trước khi tạo đơn vị chính thức.' : backendErrorText(err, 'Chưa tạo được đơn vị trên backend.');
       rememberTenantProvision({
         status: 'FAILED',
-        statusText: 'Chưa tạo được tenant trên backend',
+        statusText: 'Chưa tạo được đơn vị trên backend',
         tenant_id: payload.tenant.tenant_id,
         tenant_type: payload.tenant.tenant_type,
         message: msg
@@ -1165,17 +1165,17 @@
     render();
     try{
       const r = await postText(TRAINING_BACKEND_URL,{action:'get_tenants_v2',token:state.auth.token,source:'teacher_hub_super_admin'});
-      if(!r.success) throw new Error(r.message || 'Backend chưa hỗ trợ đọc danh sách tenant V2.');
+      if(!r.success) throw new Error(r.message || 'Backend chưa hỗ trợ đọc danh sách đơn vị V2.');
       const rows = r.tenants || r.rows || r.data || [];
       state.systemAdmin.tenants = normalizeTenantRows(rows);
-      if(!state.systemAdmin.tenants.length) state.systemAdmin.listError = 'Backend trả thành công nhưng chưa có tenant nào trong TENANTS.';
+      if(!state.systemAdmin.tenants.length) state.systemAdmin.listError = 'Backend trả thành công nhưng chưa có đơn vị nào trong TENANTS.';
     }catch(err){
       state.systemAdmin.tenants = null;
       const msg = err.message || String(err);
       const unsupported = isUnsupportedActionError(msg);
       state.systemAdmin.listError = unsupported
         ? 'Backend V2 chưa kích hoạt action get_tenants_v2. Hiện app chỉ hiển thị lịch sử thao tác trên máy này; cần bổ sung Apps Script để đọc danh sách chính thức.'
-        : backendErrorText(err, 'Chưa đọc được danh sách tenant từ backend. Hiện app chỉ hiển thị lịch sử thao tác trên máy này.');
+        : backendErrorText(err, 'Chưa đọc được danh sách đơn vị từ backend. Hiện app chỉ hiển thị lịch sử thao tác trên máy này.');
     }finally{
       state.systemAdmin.listLoading = false;
       render();
