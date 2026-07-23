@@ -174,7 +174,7 @@
   }
   function tenantRowsFromLog(){
     const seen = new Set();
-    return (state.systemAdmin.log || []).filter(x=>{
+    const rows = (state.systemAdmin.log || []).filter(x=>{
       const id = String(x.tenant_id || '').trim();
       if(!id || seen.has(id)) return false;
       seen.add(id);
@@ -187,6 +187,15 @@
       source: 'local_log',
       updated_at: x.at
     }));
+    if(!seen.has('HEAD')) rows.push({
+      tenant_id: 'HEAD',
+      tenant_name: 'Sunbot Head',
+      tenant_type: 'HEAD',
+      status: 'BLUEPRINT_DEFAULT',
+      source: 'blueprint',
+      updated_at: ''
+    });
+    return rows;
   }
   function normalizeTenantRows(rows){
     return (rows || []).map(t=>({
@@ -217,6 +226,13 @@
     const raw = hubRoleRaw();
     return raw.includes('SUPER_ADMIN') || raw.includes('CEO') || raw === 'ADMIN' || raw === 'STA_ADMIN';
   }
+  function isTeacherAccount(){
+    const raw = hubRoleRaw();
+    const p = state.auth.teacherProfile || {};
+    if(isHubAdmin()) return false;
+    return raw.includes('TEACHER') || raw.includes('GIAO_VIEN') || raw.includes('GIÁO_VIÊN') || !!p.TeacherID;
+  }
+  function isOperationalAccount(){ return !!state.auth.token && !isTeacherAccount(); }
   function hubDisplayName(){ return isHubAdmin() ? hubUserName() : displayTeacherName(hubUserName(), hubTeacherId()); }
   function hubIdentityLine(){ return isHubAdmin() ? 'Admin · ' + (hubTeacherId() || 'Sunbot ID') : hubDisplayName() + ' · ' + (hubTeacherId() || 'Sunbot ID'); }
   function askSuperAdminCode(){
@@ -341,6 +357,21 @@
     const configWarning = state.configError ? `<div class="mx-4 mt-3 p-3 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm"><b>Lưu ý:</b> ${esc(state.configError)}</div>` : '';
     const loadingNotices = `${state.configLoading ? `<div class="mx-4 mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-sm flex gap-3 items-start"><div class="loader shrink-0 !w-5 !h-5"></div><div><b>Vui lòng chờ hệ thống tải dữ liệu...</b><br><span class="text-blue-700">Đang tải danh mục giáo viên, trường, lớp và mã bài học. Nếu mạng chậm, app vẫn sẽ mở bằng dữ liệu đã lưu tạm trên máy.</span></div></div>` : ''}${state.enrollmentLoading ? `<div class="mx-4 mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-sm flex gap-3 items-start"><div class="loader shrink-0 !w-5 !h-5"></div><div><b>Đang tải danh sách trẻ theo lớp...</b><br><span class="text-blue-700">Vui lòng chờ trong giây lát. Nếu chưa tải xong, cô vẫn có thể tiếp tục điền các phần khác rồi quay lại chọn trẻ.</span></div></div>` : ''}`;
     const selectedLesson = lesson();
+    if(isOperationalAccount()){
+      document.getElementById('app').innerHTML = `
+        ${state.loading ? `<div class="fixed inset-0 z-[999] bg-black/60 flex flex-col items-center justify-center text-white backdrop-blur-sm"><div class="loader mb-3"></div><div class="font-bold">ĐANG XỬ LÝ...</div><div class="text-xs mt-1 text-gray-300">Vui lòng không đóng ứng dụng</div></div>` : ''}
+        ${renderHubTop()}
+        ${configWarning}
+        ${renderAccountAdminPanel()}
+        ${renderHubSettingsPanel()}
+        ${renderSystemAdminPanel()}
+        <div class="px-4 pt-4 pb-12">
+          <p class="text-center text-gray-400 text-[11px] mt-4 uppercase tracking-wider font-semibold">Sunbot System © 2026 · ${APP_VERSION}</p>
+        </div>
+      `;
+      bindEvents();
+      return;
+    }
 
     document.getElementById('app').innerHTML = `
       ${state.loading ? `<div class="fixed inset-0 z-[999] bg-black/60 flex flex-col items-center justify-center text-white backdrop-blur-sm"><div class="loader mb-3"></div><div class="font-bold">ĐANG XỬ LÝ...</div><div class="text-xs mt-1 text-gray-300">Vui lòng không đóng ứng dụng</div></div>` : ''}
@@ -637,6 +668,7 @@
     </button>`;
   }
   function renderHubTop(){
+    if(isOperationalAccount()) return renderAdminHubTop();
     const missingChecklist = state.data.checklist.filter(x=>!x).length;
     const reportReady = state.data.teacher_id && state.data.school_id && state.data.lesson_id && selectedClassIds().length ? 'Đang điền' : 'Cần chọn dữ liệu';
     const academy = state.auth.academy || {};
@@ -687,6 +719,54 @@
         ${hubCard('Thu nhập của tôi','Theo dõi số buổi dạy và đối soát khi hoàn thiện.','fa-wallet','emerald','payroll','Đang xây')}
         ${isHubAdmin()?hubCard('Tài khoản','Cấp mới hoặc đổi ID/mật khẩu cho giáo viên.','fa-user-gear','slate','accounts','Admin'):''}
         ${isSuperAdmin()?hubCard('Hệ thống','Tạo tenant, năm học và cấu hình backend V2.','fa-sitemap','slate','system','1906'):''}
+      </div>`;
+  }
+
+  function renderAdminHubTop(){
+    return `
+      <div class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-orange-100 pt-[var(--safe-top)] px-4 py-3 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center overflow-hidden shrink-0">
+            <img src="${SUNBOT_LOGO_URL}" alt="Sunbot" class="w-10 h-10 object-contain" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="font-black text-[17px] text-slate-950 leading-tight">Sunbot Admin Console</div>
+            <div class="text-[12px] text-slate-500 leading-snug mt-0.5 truncate">${esc(hubIdentityLine())}</div>
+          </div>
+          <button id="btnHubLogout" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 active-scale"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+      </div>
+      <div class="mx-4 mt-3 rounded-[24px] bg-gradient-to-br from-slate-950 via-slate-800 to-orange-500 p-4 text-white shadow-xl shadow-slate-200">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-[11px] font-black tracking-[.16em] uppercase opacity-80">Quản trị vận hành</div>
+            <div class="mt-1 text-xl font-black leading-tight">Sunbot Platform</div>
+            <div class="mt-1 text-[12px] text-white/75 leading-snug">Quản lý hệ thống, tài khoản, tenant và cấu hình nội bộ.</div>
+          </div>
+          <button data-hub-action="settings" class="w-10 h-10 rounded-2xl bg-white/15 border border-white/25 active-scale" title="Cấu hình Hub"><i class="fa-solid fa-sliders"></i></button>
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          ${isSuperAdmin()?`<button data-hub-action="system" class="rounded-2xl bg-white text-slate-900 p-3 text-left active-scale">
+            <div class="flex items-center justify-between gap-2"><i class="fa-solid fa-sitemap text-orange-600"></i><span class="text-[10px] font-black text-orange-600">1906</span></div>
+            <div class="mt-2 text-[13px] font-black leading-tight">Hệ thống</div>
+          </button>`:''}
+          <button data-hub-action="accounts" class="rounded-2xl bg-white/15 border border-white/25 p-3 text-left active-scale">
+            <div class="flex items-center justify-between gap-2"><i class="fa-solid fa-user-gear"></i><span class="text-[10px] font-black opacity-80">Admin</span></div>
+            <div class="mt-2 text-[13px] font-black leading-tight">Tài khoản</div>
+          </button>
+          <button data-hub-action="center" class="rounded-2xl bg-white/15 border border-white/25 p-3 text-left active-scale">
+            <div class="flex items-center justify-between gap-2"><i class="fa-solid fa-compass"></i><i class="fa-solid fa-arrow-up-right-from-square text-[11px] opacity-80"></i></div>
+            <div class="mt-2 text-[13px] font-black leading-tight">Trung tâm điều hành</div>
+          </button>
+          <button data-hub-action="academy" class="rounded-2xl bg-white/15 border border-white/25 p-3 text-left active-scale">
+            <div class="flex items-center justify-between gap-2"><i class="fa-solid fa-graduation-cap"></i><span class="text-[10px] font-black opacity-80">Hub</span></div>
+            <div class="mt-2 text-[13px] font-black leading-tight">Học viện</div>
+          </button>
+        </div>
+      </div>
+      <div class="mx-4 mt-3 grid grid-cols-2 gap-2">
+        ${hubCard('Cấu hình Hub','Đổi link trung tâm điều hành và các thiết lập chung.','fa-sliders','slate','settings','Admin')}
+        ${isSuperAdmin()?hubCard('Tenant hiện có','Xem trạng thái backend V2 và lịch sử tenant.','fa-building-circle-check','slate','system','V2'):''}
       </div>`;
   }
 
@@ -1054,7 +1134,9 @@
       await syncHubProfile();
       await loadTenantsV2();
     }catch(err){
-      const msg = err.message || String(err);
+      const rawMsg = err.message || String(err);
+      const unsupported = /không hỗ trợ|khong ho tro|unsupported|unknown action|action/i.test(rawMsg);
+      const msg = unsupported ? 'Backend V2 chưa kích hoạt action provision_tenant_v2. Yêu cầu chưa được ghi vào TENANTS; cần bổ sung Apps Script trước khi tạo tenant chính thức.' : rawMsg;
       rememberTenantProvision({
         status: 'FAILED',
         statusText: 'Chưa tạo được tenant trên backend',
@@ -1081,7 +1163,11 @@
       if(!state.systemAdmin.tenants.length) state.systemAdmin.listError = 'Backend trả thành công nhưng chưa có tenant nào trong TENANTS.';
     }catch(err){
       state.systemAdmin.tenants = null;
-      state.systemAdmin.listError = 'Chưa đọc được từ backend: ' + (err.message || String(err)) + '. App đang hiển thị lịch sử thao tác trên máy nếu có.';
+      const msg = err.message || String(err);
+      const unsupported = /không hỗ trợ|khong ho tro|unsupported|unknown action|action/i.test(msg);
+      state.systemAdmin.listError = unsupported
+        ? 'Backend V2 chưa kích hoạt action get_tenants_v2. Hiện app chỉ hiển thị lịch sử thao tác trên máy này; cần bổ sung Apps Script để đọc danh sách chính thức.'
+        : 'Chưa đọc được danh sách tenant từ backend. Hiện app chỉ hiển thị lịch sử thao tác trên máy này.';
     }finally{
       state.systemAdmin.listLoading = false;
       render();
