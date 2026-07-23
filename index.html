@@ -500,15 +500,12 @@
               <img src="${SUNBOT_LOGO_URL}" class="w-11 h-11 object-contain" alt="Sunbot" />
             </div>
             <div>
-              <div class="text-[11px] font-black tracking-[.18em] text-orange-500 uppercase">Sunbot Teacher Hub</div>
-              <h1 class="text-2xl font-black text-slate-900 leading-tight">Một cửa cho giáo viên</h1>
+              <div class="text-[11px] font-black tracking-[.18em] text-orange-500 uppercase">Sunbot Internal Access</div>
+              <h1 class="text-2xl font-black text-slate-900 leading-tight">Đăng nhập để tiếp tục</h1>
             </div>
           </div>
-          <div class="mt-5 grid grid-cols-2 gap-2 text-[12px]">
-            <div class="rounded-2xl bg-orange-50 border border-orange-100 p-3"><b>Báo cáo ca học</b><br><span class="text-slate-500">Gửi sĩ số, ảnh, checklist</span></div>
-            <div class="rounded-2xl bg-blue-50 border border-blue-100 p-3"><b>Đánh giá trẻ</b><br><span class="text-slate-500">Mở app đánh giá</span></div>
-            <div class="rounded-2xl bg-amber-50 border border-amber-100 p-3"><b>Học viện</b><br><span class="text-slate-500">Bài học, tài liệu, bài tập</span></div>
-            <div class="rounded-2xl bg-emerald-50 border border-emerald-100 p-3"><b>Hành trình</b><br><span class="text-slate-500">Minh chứng, lịch sử, lương</span></div>
+          <div class="mt-5 rounded-2xl bg-orange-50 border border-orange-100 p-4 text-[13px] leading-relaxed text-slate-600">
+            Vui lòng sử dụng tài khoản Sunbot được cấp để truy cập hệ thống nội bộ.
           </div>
           <div class="mt-5 space-y-3">
             <div>
@@ -522,7 +519,7 @@
             <button id="btnHubLogin" class="w-full h-12 rounded-2xl bg-[#FF6B00] text-white font-black shadow-lg shadow-orange-200 active-scale">${state.auth.loading?'Đang đăng nhập...':'Đăng nhập'}</button>
           </div>
           ${msg}
-          <div class="mt-4 text-[12px] leading-relaxed text-slate-500">Tài khoản dùng chung với Teacher Academy. Sau khi đăng nhập, giáo viên vào được báo cáo ca học, đánh giá trẻ, học viện và các mục theo dõi vận hành.</div>
+          <div class="mt-4 text-[12px] leading-relaxed text-slate-500">Nếu chưa có tài khoản hoặc cần đặt lại mật khẩu, vui lòng liên hệ quản trị hệ thống.</div>
         </div>
       </div>`;
     const pass = $('hubLoginPass');
