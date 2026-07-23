@@ -34,6 +34,7 @@
   const EVALUATION_APP_URL = "https://sunbotvietnam.github.io/report/";
   const IMPACT_APP_URL = "https://sunbotvietnam.github.io/app/impact/";
   const ACADEMY_APP_URL = "https://sunbotvietnam.github.io/app/training/";
+  const DEFAULT_INTERNAL_CENTER_URL = "https://app.notion.com/p/T-NG-SUNBOT-TRUNG-T-M-I-U-H-NG-N-I-B-317bb9c855e880c399bae4355efdb1f5";
   const APP_VERSION = "teacher-hub-v1-training-auth-2026-07";
   const MAX_IMAGE_PX = 900;
   const IMAGE_QUALITY = 0.62;
@@ -60,6 +61,7 @@
   const CONFIG_CACHE_KEY = "sunbot_report_config_cache_v35";
   const CONFIG_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
   const ENROLLMENT_CACHE_PREFIX = "sunbot_enrollment_cache_v35_";
+  const HUB_SETTINGS_KEY = "sunbot_hub_settings_v1";
 
   const DEMO_CONFIG = {
     teachers: [
@@ -100,6 +102,9 @@
     },
     hubModule: 'report',
     showAccountAdmin: false,
+    showHubSettings: false,
+    hubSettings: loadHubSettings(),
+    hubSettingsAdmin: { loading:false, error:'', ok:'' },
     accountAdmin: { loading:false, error:'', ok:'' },
     loading: false,
     configLoading: true,
@@ -129,6 +134,28 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const norm = (v) => String(v == null ? "" : v).trim();
+  function loadHubSettings(){
+    try{
+      const saved = JSON.parse(localStorage.getItem(HUB_SETTINGS_KEY) || '{}');
+      return Object.assign({ internalCenterUrl: DEFAULT_INTERNAL_CENTER_URL }, saved || {});
+    }catch(e){
+      return { internalCenterUrl: DEFAULT_INTERNAL_CENTER_URL };
+    }
+  }
+  function saveHubSettingsLocal(settings){
+    state.hubSettings = Object.assign({}, state.hubSettings, settings || {});
+    try{ localStorage.setItem(HUB_SETTINGS_KEY, JSON.stringify(state.hubSettings)); }catch(e){}
+  }
+  function applyHubSettings(payload){
+    const src = payload && (payload.hubSettings || payload.settings || payload.config);
+    if(src && src.internalCenterUrl) saveHubSettingsLocal({ internalCenterUrl: src.internalCenterUrl });
+  }
+  function hubInternalCenterUrl(){
+    return norm(state.hubSettings && state.hubSettings.internalCenterUrl) || DEFAULT_INTERNAL_CENTER_URL;
+  }
+  function validHttpUrl(url){
+    try{ const u = new URL(url); return ['http:','https:'].includes(u.protocol); }catch(e){ return false; }
+  }
   function todayISO(){ return new Date().toISOString().slice(0,10); }
   function isTruthy(v){ return v === true || String(v).toUpperCase() === 'TRUE' || String(v).toLowerCase() === 'active' || String(v).trim() === ''; }
   function postText(url, payload){ return fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).then(async res=>{const text=await res.text(); try{return JSON.parse(text)}catch(e){throw new Error(text||'Không đọc được phản hồi hệ thống')}}); }
@@ -270,6 +297,7 @@
       ${configWarning}
       ${enrollmentWarning}
       ${renderAccountAdminPanel()}
+      ${renderHubSettingsPanel()}
       <div id="reportFormStart" class="mx-4 mt-4 flex items-center justify-between gap-3">
         <div>
           <div class="text-[11px] font-black tracking-[.14em] text-orange-500 uppercase">Báo cáo ca học</div>
@@ -542,16 +570,17 @@
       orange:{border:'border-orange-100',bg:'bg-orange-50',text:'text-orange-600',badge:'bg-orange-50 text-orange-700 border-orange-100'},
       blue:{border:'border-blue-100',bg:'bg-blue-50',text:'text-blue-600',badge:'bg-blue-50 text-blue-700 border-blue-100'},
       amber:{border:'border-amber-100',bg:'bg-amber-50',text:'text-amber-600',badge:'bg-amber-50 text-amber-700 border-amber-100'},
-      emerald:{border:'border-emerald-100',bg:'bg-emerald-50',text:'text-emerald-600',badge:'bg-emerald-50 text-emerald-700 border-emerald-100'}
+      emerald:{border:'border-emerald-100',bg:'bg-emerald-50',text:'text-emerald-600',badge:'bg-emerald-50 text-emerald-700 border-emerald-100'},
+      slate:{border:'border-slate-200',bg:'bg-slate-100',text:'text-slate-700',badge:'bg-slate-100 text-slate-700 border-slate-200'}
     };
     const c = tones[tone] || tones.orange;
-    return `<button class="text-left bg-white border ${c.border} rounded-2xl p-4 shadow-sm active-scale" data-hub-action="${action}">
-      <div class="flex items-start justify-between gap-3">
-        <div class="w-10 h-10 rounded-xl ${c.bg} ${c.text} flex items-center justify-center"><i class="fa-solid ${icon}"></i></div>
-        ${badge?`<span class="text-[10px] font-black rounded-full border ${c.badge} px-2 py-1">${esc(badge)}</span>`:''}
+    return `<button class="text-left bg-white border ${c.border} rounded-2xl p-3 shadow-sm active-scale min-h-[112px]" data-hub-action="${action}">
+      <div class="flex items-center justify-between gap-2">
+        <div class="w-9 h-9 rounded-xl ${c.bg} ${c.text} flex items-center justify-center"><i class="fa-solid ${icon}"></i></div>
+        ${badge?`<span class="text-[10px] font-black rounded-full border ${c.badge} px-2 py-1 whitespace-nowrap">${esc(badge)}</span>`:''}
       </div>
-      <div class="mt-3 font-black text-slate-900">${esc(title)}</div>
-      <div class="mt-1 text-[12px] leading-snug text-slate-500">${esc(desc)}</div>
+      <div class="mt-2 font-black text-[14px] text-slate-900 leading-tight">${esc(title)}</div>
+      <div class="mt-1 text-[11px] leading-snug text-slate-500">${esc(desc)}</div>
     </button>`;
   }
   function renderHubTop(){
@@ -574,26 +603,36 @@
         </div>
       </div>
       <div class="mx-4 mt-3 rounded-[24px] bg-gradient-to-br from-orange-500 via-orange-400 to-amber-300 p-4 text-white shadow-xl shadow-orange-200">
-        <div class="text-[11px] font-black tracking-[.16em] uppercase opacity-90">Việc nên làm hôm nay</div>
-        <div class="mt-2 grid grid-cols-3 gap-2">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-[11px] font-black tracking-[.16em] uppercase opacity-90">Trung tâm làm việc</div>
+            <div class="mt-1 text-xl font-black leading-tight">Sunbot Apps</div>
+          </div>
+          ${isHubAdmin()?`<button data-hub-action="settings" class="w-10 h-10 rounded-2xl bg-white/20 border border-white/30 active-scale" title="Cấu hình Hub"><i class="fa-solid fa-sliders"></i></button>`:''}
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-2">
           <button data-hub-action="report" class="rounded-2xl bg-white/95 text-orange-700 p-3 text-left active-scale">
-            <div class="text-2xl font-black">${totalAttendance()||0}</div><div class="text-[11px] font-bold leading-tight">${esc(reportReady)}</div>
+            <div class="flex items-center justify-between gap-2"><i class="fa-solid fa-paper-plane"></i><span class="text-[10px] font-black">${esc(reportReady)}</span></div>
+            <div class="mt-2 text-[13px] font-black leading-tight">Báo cáo ca học</div>
+          </button>
+          <button data-hub-action="center" class="rounded-2xl bg-slate-950/85 text-white p-3 text-left active-scale">
+            <div class="flex items-center justify-between gap-2"><i class="fa-solid fa-compass"></i><i class="fa-solid fa-arrow-up-right-from-square text-[11px] opacity-80"></i></div>
+            <div class="mt-2 text-[13px] font-black leading-tight">Trung tâm điều hành</div>
           </button>
           <button data-hub-action="academy" class="rounded-2xl bg-white/20 border border-white/30 p-3 text-left active-scale">
-            <div class="text-2xl font-black">${materials}</div><div class="text-[11px] font-bold leading-tight">Tài liệu mở</div>
+            <div class="text-xl font-black">${materials}</div><div class="text-[11px] font-bold leading-tight">Tài liệu học viện</div>
           </button>
           <button data-hub-action="myReports" class="rounded-2xl bg-white/20 border border-white/30 p-3 text-left active-scale">
-            <div class="text-2xl font-black">${subs}</div><div class="text-[11px] font-bold leading-tight">Bài học viện</div>
+            <div class="text-xl font-black">${subs}</div><div class="text-[11px] font-bold leading-tight">Theo dõi học tập</div>
           </button>
         </div>
         ${missingChecklist?`<div class="mt-3 rounded-2xl bg-white/95 text-orange-800 px-3 py-2 text-[12px] font-bold">Checklist báo cáo còn ${missingChecklist} mục chưa tick.</div>`:''}
       </div>
       <div class="mx-4 mt-3 grid grid-cols-2 gap-2">
-        ${hubCard('Báo cáo ca học','Gửi báo cáo, sĩ số, ảnh và checklist ngay trong Hub.','fa-paper-plane','orange','report','Trong app')}
-        ${hubCard('Đánh giá trẻ','Mở app đánh giá trẻ theo lớp và hoạt động.','fa-clipboard-check','blue','evaluation','Link ngoài')}
-        ${hubCard('Học viện','Tài liệu, bài tập, tiến độ học tập giáo viên.','fa-graduation-cap','amber','academy','ID/pass chung')}
-        ${hubCard('Thu nhập của tôi','Theo dõi số buổi dạy và đối soát thu nhập khi hệ thống hoàn thiện.','fa-wallet','emerald','payroll','Đang xây')}
-        ${isHubAdmin()?hubCard('Tài khoản','Cấp mới hoặc đổi ID/mật khẩu cho giáo viên.','fa-user-gear','blue','accounts','Admin'):''}
+        ${hubCard('Đánh giá trẻ','Mở nhanh app đánh giá theo lớp và hoạt động.','fa-clipboard-check','blue','evaluation','Link')}
+        ${hubCard('Học viện','Tài liệu, bài tập và tiến độ đào tạo giáo viên.','fa-graduation-cap','amber','academy','ID chung')}
+        ${hubCard('Thu nhập của tôi','Theo dõi số buổi dạy và đối soát khi hoàn thiện.','fa-wallet','emerald','payroll','Đang xây')}
+        ${isHubAdmin()?hubCard('Tài khoản','Cấp mới hoặc đổi ID/mật khẩu cho giáo viên.','fa-user-gear','slate','accounts','Admin'):''}
       </div>`;
   }
 
@@ -636,6 +675,29 @@
       </div>`)}`;
   }
 
+  function renderHubSettingsPanel(){
+    if(!state.showHubSettings || !isHubAdmin()) return '';
+    const admin = state.hubSettingsAdmin;
+    const url = hubInternalCenterUrl();
+    return `${section('Cấu hình Hub', 'Chỉ Admin thấy mục này. Dùng để đổi link trung tâm điều hành nội bộ.')}
+      ${card(`<div class="p-3 space-y-3">
+        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3 text-[12px] text-slate-600 leading-relaxed">
+          Link này hiển thị thành nút Trung tâm điều hành sau khi người dùng đăng nhập. Nếu backend chưa hỗ trợ lưu cấu hình chung, app vẫn lưu tạm trên trình duyệt hiện tại.
+        </div>
+        <label class="block">
+          <span class="text-[12px] font-black text-gray-500 uppercase">Đường dẫn trung tâm điều hành</span>
+          <input id="hubInternalUrl" class="mt-2 w-full h-11 rounded-xl border border-gray-200 px-3 outline-none focus:border-orange-400" value="${esc(url)}" placeholder="https://..." />
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnSaveHubSettings" class="h-10 rounded-xl bg-orange-500 text-white text-[13px] font-bold active-scale">${admin.loading?'Đang lưu...':'Lưu link'}</button>
+          <button id="btnOpenInternalCenter" class="h-10 rounded-xl bg-slate-900 text-white text-[13px] font-bold active-scale"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>Mở thử</button>
+        </div>
+        ${admin.ok?`<div class="p-2 rounded-lg bg-green-50 text-green-700 text-[12px]">${esc(admin.ok)}</div>`:''}
+        ${admin.error?`<div class="p-2 rounded-lg bg-red-50 text-red-700 text-[12px]">${esc(admin.error)}</div>`:''}
+        <button id="btnCloseHubSettings" class="h-10 rounded-xl bg-white border border-gray-200 text-gray-600 text-[13px] font-bold active-scale">Đóng cấu hình</button>
+      </div>`)}`;
+  }
+
   async function hubLogin(){
     const username = norm(($('hubLoginId')||{}).value);
     const password = norm(($('hubLoginPass')||{}).value);
@@ -663,10 +725,18 @@
       if(!r.success) throw new Error(r.message || 'Không đồng bộ được Teacher Hub.');
       state.auth.teacherProfile = r.teacherProfile || {};
       state.auth.academy = r;
+      applyHubSettings(r);
+      await loadHubSettingsFromBackend();
       syncReportTeacherFromAuth();
     } catch(err){
       state.auth.error = err.message || String(err);
     }
+  }
+  async function loadHubSettingsFromBackend(){
+    try{
+      const r = await postText(TRAINING_BACKEND_URL,{action:'get_hub_settings',token:state.auth.token,source:'teacher_hub'});
+      if(r && r.success) applyHubSettings(r);
+    }catch(e){}
   }
   function syncReportTeacherFromAuth(){
     const profile = state.auth.teacherProfile || {};
@@ -687,6 +757,8 @@
     if(action==='evaluation'){ window.location.href = EVALUATION_APP_URL; return; }
     if(action==='academy'){ window.location.href = ACADEMY_APP_URL; return; }
     if(action==='impact'){ window.location.href = IMPACT_APP_URL; return; }
+    if(action==='center'){ window.open(hubInternalCenterUrl(), '_blank', 'noopener'); return; }
+    if(action==='settings' && isHubAdmin()){ state.showHubSettings = true; render(); setTimeout(()=>document.getElementById('hubInternalUrl')?.scrollIntoView({behavior:'smooth'}),0); return; }
     if(action==='myReports'){ state.showMyReports = true; render(); return; }
     if(action==='accounts'){ state.showAccountAdmin = true; render(); setTimeout(()=>document.getElementById('acctName')?.scrollIntoView({behavior:'smooth'}),0); return; }
     if(action==='payroll'){ alert('Mục Thu nhập của tôi đang được xây dựng. Sau khi hoàn thiện, mục này sẽ hiển thị số buổi dạy, đối soát và tổng thu nhập dự kiến.'); }
@@ -731,12 +803,49 @@
     finally{ state.accountAdmin.loading=false; render(); }
   }
 
+  async function saveHubSettings(){
+    if(!isHubAdmin()) return;
+    const internalCenterUrl = norm(($('hubInternalUrl')||{}).value);
+    if(!internalCenterUrl || !validHttpUrl(internalCenterUrl)){
+      state.hubSettingsAdmin.error = 'Cần nhập link hợp lệ bắt đầu bằng http:// hoặc https://.';
+      state.hubSettingsAdmin.ok = '';
+      render();
+      return;
+    }
+    if(!confirmAccountAdminCode()) return;
+    saveHubSettingsLocal({ internalCenterUrl });
+    state.hubSettingsAdmin.loading = true;
+    state.hubSettingsAdmin.error = '';
+    state.hubSettingsAdmin.ok = '';
+    render();
+    try{
+      const r = await postText(TRAINING_BACKEND_URL,{action:'update_hub_settings',token:state.auth.token,settings:{internalCenterUrl},source:'teacher_hub_admin'});
+      if(!r.success) throw new Error(r.message || 'Backend chưa hỗ trợ lưu cấu hình Hub.');
+      applyHubSettings(r);
+      state.hubSettingsAdmin.ok = 'Đã lưu link trung tâm điều hành.';
+    }catch(err){
+      state.hubSettingsAdmin.ok = 'Đã lưu tạm link trên thiết bị này.';
+      state.hubSettingsAdmin.error = 'Chưa lưu được cấu hình chung qua backend: ' + (err.message || String(err));
+    }finally{
+      state.hubSettingsAdmin.loading = false;
+      render();
+    }
+  }
+  function openInternalCenterFromForm(){
+    const url = norm(($('hubInternalUrl')||{}).value) || hubInternalCenterUrl();
+    if(!validHttpUrl(url)){ alert('Link chưa hợp lệ.'); return; }
+    window.open(url, '_blank', 'noopener');
+  }
+
   function bindEvents(){
     const on = (id, ev, fn) => { const el=$(id); if(el) el.addEventListener(ev, fn); };
     on('btnHubLogout','click',hubLogout);
     on('btnCreateAccount','click',createHubAccount);
     on('btnUpdateAccount','click',updateHubAccount);
     on('btnCloseAccountAdmin','click',()=>{ state.showAccountAdmin=false; state.accountAdmin.error=''; state.accountAdmin.ok=''; render(); });
+    on('btnSaveHubSettings','click',saveHubSettings);
+    on('btnOpenInternalCenter','click',openInternalCenterFromForm);
+    on('btnCloseHubSettings','click',()=>{ state.showHubSettings=false; state.hubSettingsAdmin.error=''; state.hubSettingsAdmin.ok=''; render(); });
     document.querySelectorAll('[data-hub-action]').forEach(el=>el.addEventListener('click',()=>handleHubAction(el.dataset.hubAction)));
     on('btnImpact','click',()=>handleHubAction('impact'));
     on('btnEvaluation','click',()=>handleHubAction('evaluation'));
