@@ -132,6 +132,13 @@
   function postText(url, payload){ return fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).then(async res=>{const text=await res.text(); try{return JSON.parse(text)}catch(e){throw new Error(text||'Không đọc được phản hồi hệ thống')}}); }
   function hubUserName(){ const u=state.auth.user||{}, p=state.auth.teacherProfile||{}; return p.FullName||u.FullName||u.display_name||u.Username||u.username||'Giáo viên Sunbot'; }
   function hubTeacherId(){ const u=state.auth.user||{}, p=state.auth.teacherProfile||{}; return p.TeacherID||u.TeacherID||u.teacher_id||u.UserID||u.Username||u.username||''; }
+  function displayTeacherName(name, id){
+    const rawName = String(name || '');
+    const rawId = String(id || '');
+    if(rawId.toUpperCase()==='GV-0016' || rawName.toLowerCase().includes('nguyễn tường vân') || rawName.toLowerCase().includes('nguyen tuong van')) return 'Giáo viên Test';
+    return rawName;
+  }
+  function hubDisplayName(){ return displayTeacherName(hubUserName(), hubTeacherId()); }
   function isHubAdmin(){ const u=state.auth.user||{}; const raw=String(u.PermissionGroupID||u.role_id||u.Role||u.role||'').toUpperCase(); return raw.includes('ADMIN')||raw.includes('CEO')||raw.includes('STA_ADMIN'); }
   function teacherLocked(){ return !!state.auth.token && !isHubAdmin() && !!state.data.teacher_id; }
   function saveAuth(r){
@@ -552,7 +559,7 @@
           </div>
           <div class="min-w-0 flex-1">
             <div class="font-black text-[17px] text-slate-950 leading-tight">Sunbot Teacher Hub</div>
-            <div class="text-[12px] text-slate-500 leading-snug mt-0.5 truncate">${esc(hubUserName())} · ${esc(hubTeacherId() || 'Sunbot ID')}</div>
+            <div class="text-[12px] text-slate-500 leading-snug mt-0.5 truncate">${esc(hubDisplayName())} · ${esc(hubTeacherId() || 'Sunbot ID')}</div>
           </div>
           <button id="btnHubLogout" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 active-scale"><i class="fa-solid fa-right-from-bracket"></i></button>
         </div>
@@ -576,7 +583,7 @@
         ${hubCard('Báo cáo ca học','Gửi báo cáo, sĩ số, ảnh và checklist ngay trong Hub.','fa-paper-plane','orange','report','Trong app')}
         ${hubCard('Đánh giá trẻ','Mở app đánh giá trẻ theo lớp và hoạt động.','fa-clipboard-check','blue','evaluation','Link ngoài')}
         ${hubCard('Học viện','Tài liệu, bài tập, tiến độ học tập giáo viên.','fa-graduation-cap','amber','academy','ID/pass chung')}
-        ${hubCard('Lương theo buổi','Theo dõi số buổi dạy và đối soát lương khi backend sẵn sàng.','fa-wallet','emerald','payroll','Sắp có')}
+        ${hubCard('Thu nhập của tôi','Theo dõi số buổi dạy và đối soát thu nhập khi hệ thống hoàn thiện.','fa-wallet','emerald','payroll','Đang xây')}
       </div>`;
   }
 
@@ -632,7 +639,7 @@
     if(action==='academy'){ window.location.href = ACADEMY_APP_URL; return; }
     if(action==='impact'){ window.location.href = IMPACT_APP_URL; return; }
     if(action==='myReports'){ state.showMyReports = true; render(); return; }
-    if(action==='payroll'){ alert('Mục lương theo buổi sẽ dùng dữ liệu số buổi dạy từ dashboard vận hành. Backend hiện chưa nối vào Hub này.'); }
+    if(action==='payroll'){ alert('Mục Thu nhập của tôi đang được xây dựng. Sau khi hoàn thiện, mục này sẽ hiển thị số buổi dạy, đối soát và tổng thu nhập dự kiến.'); }
   }
 
   function bindEvents(){
@@ -801,7 +808,7 @@
 
   function selectedClassKey(){ return selectedClassIds().sort().join('|'); }
   function applyConfig(json){
-    state.config.teachers = json.teachers || [];
+    state.config.teachers = (json.teachers || []).map(t=>Object.assign({},t,{teacher_name:displayTeacherName(t.teacher_name,t.teacher_id)}));
     state.config.schools = json.schools || [];
     state.config.classes = json.classes || [];
     state.config.lessons = json.lessons || [];
