@@ -32,6 +32,7 @@
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwrip9Wr5GgS8941Pur9DhJmYUodIjyNX3DJMmmz2Vx1I95xlDEfu2LKhDSTYxo9PNvmg/exec";
   const EVALUATION_APP_URL = "https://sunbotvietnam.github.io/report/";
   const IMPACT_APP_URL = "https://sunbotvietnam.github.io/app/impact/";
+  const ACADEMY_APP_URL = "https://sunbotvietnam.github.io/app/training/";
   const APP_VERSION = "teacher-report-v4-receipt-myreports-impact-2026-05";
   const MAX_IMAGE_PX = 900;
   const IMAGE_QUALITY = 0.62;
@@ -233,12 +234,15 @@
       ${loadingNotices}
       ${configWarning}
       ${enrollmentWarning}
-      <div class="mx-4 mt-3 grid grid-cols-3 gap-2">
+      <div class="mx-4 mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
         <button id="btnImpact" class="h-11 bg-white border border-orange-100 text-orange-700 rounded-xl px-2 shadow-sm active-scale flex items-center justify-center gap-1.5 text-[12px] font-bold">
           <i class="fa-solid fa-sun text-[13px]"></i><span>Hành trình</span>
         </button>
         <button id="btnEvaluation" class="h-11 bg-white border border-blue-100 text-blue-700 rounded-xl px-2 shadow-sm active-scale flex items-center justify-center gap-1.5 text-[12px] font-bold">
           <i class="fa-solid fa-clipboard-check text-[13px]"></i><span>Đánh giá trẻ</span>
+        </button>
+        <button id="btnAcademy" class="h-11 bg-white border border-amber-100 text-amber-700 rounded-xl px-2 shadow-sm active-scale flex items-center justify-center gap-1.5 text-[12px] font-bold">
+          <i class="fa-solid fa-graduation-cap text-[13px]"></i><span>Học viện</span>
         </button>
         <button id="btnMyReports" class="h-11 bg-white border border-gray-200 text-gray-700 rounded-xl px-2 shadow-sm active-scale flex items-center justify-center gap-1.5 text-[12px] font-bold">
           <i class="fa-solid fa-list-check text-[13px]"></i><span>Báo cáo của tôi</span>
@@ -453,6 +457,7 @@
     const on = (id, ev, fn) => { const el=$(id); if(el) el.addEventListener(ev, fn); };
     on('btnImpact','click',()=>{ window.location.href = IMPACT_APP_URL; });
     on('btnEvaluation','click',()=>{ window.location.href = EVALUATION_APP_URL; });
+    on('btnAcademy','click',()=>{ window.location.href = ACADEMY_APP_URL; });
     on('btnMyReports','click',()=>{ state.showMyReports = true; render(); });
     on('btnCloseMyReports','click',()=>{ state.showMyReports = false; state.myReports.error=''; render(); });
     on('btnLoadMyReports','click',loadMyReports);
