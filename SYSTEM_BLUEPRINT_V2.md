@@ -661,7 +661,7 @@ message hoac audit_log_id neu co
 
 Neu request da gui nhung backend loi/khong co action, frontend phai hien thi "Chua tao duoc tenant tren backend" va luu lich su thao tac local de SUPER_ADMIN biet trang thai.
 
-Backend mau cho cac action nay nam tai `apps-script/ProvisioningV2.gs` trong repo app. File nay can duoc dan vao Training/Auth Apps Script backend va route tu dispatcher `doPost`.
+Backend cho cac action nay da duoc trien khai truc tiep vao Training/Auth Apps Script project trong file `ProvisioningV2.js` va route tu dispatcher `doPost`.
 
 Trang thai tenant:
 
