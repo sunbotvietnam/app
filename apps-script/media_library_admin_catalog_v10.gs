@@ -31,9 +31,9 @@ const SUNBOT_MEDIA_ADMIN_CATALOG = {
     uploaders: 'MEDIA_REF_UPLOADERS'
   },
   defaultYears: [
-    { year_id: '2425', year_name: '2024-2025', active: 'TRUE' },
-    { year_id: '2526', year_name: '2025-2026', active: 'TRUE' },
-    { year_id: '2627', year_name: '2026-2027', active: 'TRUE' }
+    { year_id: 'before_2026', year_name: 'Trước 2026', active: 'TRUE' },
+    { year_id: '2526', year_name: 'Năm học 2025-2026', active: 'TRUE' },
+    { year_id: '2627', year_name: 'Năm học 2026-2027', active: 'TRUE' }
   ],
   defaultSchools: [
     { school_id: 'HN-SH', school_name: 'Hà Nội - Sen Hồng', active: 'TRUE' },
