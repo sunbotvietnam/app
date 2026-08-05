@@ -36,10 +36,40 @@ const SUNBOT_MEDIA_ADMIN_CATALOG = {
     { year_id: '2627', year_name: '2026-2027', active: 'TRUE' }
   ],
   defaultSchools: [
-    'Sen Hồng','Bình Minh','Hàng Đào','Lê Trọng Tấn','Hoa Mai','Sơn Ca','Quang Trung','Tuổi Hoa','Kim Chung','Hà Vỹ',
-    'Linh Đàm','Hoa Anh Đào','Ngọc Thụy','Sài Đồng','Hà Thắng','Greenery','Green NA','Lê Lợi NA','QT Nhật Bản','AMG','Baby Enistein','Bút Chì Màu',
-    'Việt Hàn IQ','Ocean Park Kids','Sơn La Star','Việt Genius','Happy World','Hoa Trạng Nguyên','Nobel','Thế giới kẹo ngọt',
-    'Z121','MN Hoa Hồng','MN Thanh Lâm','VSK Thăng Long'
+    { school_id: 'HN-SH', school_name: 'Sen Hồng', active: 'TRUE' },
+    { school_id: 'NA-BM', school_name: 'Bình Minh', active: 'TRUE' },
+    { school_id: 'HN-HD', school_name: 'Hàng Đào', active: 'TRUE' },
+    { school_id: 'HN-LTT', school_name: 'Lê Trọng Tấn', active: 'TRUE' },
+    { school_id: 'HN-HM', school_name: 'Hoa Mai', active: 'TRUE' },
+    { school_id: 'HN-SC', school_name: 'Sơn Ca', active: 'TRUE' },
+    { school_id: 'NA-QT', school_name: 'Quang Trung', active: 'TRUE' },
+    { school_id: 'HN-TH', school_name: 'Tuổi Hoa', active: 'TRUE' },
+    { school_id: 'HN-KC', school_name: 'Kim Chung', active: 'TRUE' },
+    { school_id: 'HN-HV', school_name: 'Hà Vỹ', active: 'TRUE' },
+    { school_id: 'HN-LD', school_name: 'Linh Đàm', active: 'TRUE' },
+    { school_id: 'HN-HAD', school_name: 'Hoa Anh Đào', active: 'TRUE' },
+    { school_id: 'HN-NT', school_name: 'Ngọc Thụy', active: 'TRUE' },
+    { school_id: 'HN-SD', school_name: 'Sài Đồng', active: 'TRUE' },
+    { school_id: 'HN-HT', school_name: 'Hà Thắng', active: 'TRUE' },
+    { school_id: 'HN-GREENERY', school_name: 'Greenery', active: 'TRUE' },
+    { school_id: 'NA-GREEN', school_name: 'Green NA', active: 'TRUE' },
+    { school_id: 'NA-LL', school_name: 'Lê Lợi NA', active: 'TRUE' },
+    { school_id: 'HN-QTNB', school_name: 'QT Nhật Bản', active: 'TRUE' },
+    { school_id: 'HN-AMG', school_name: 'AMG', active: 'TRUE' },
+    { school_id: 'HN-BE', school_name: 'Baby Enistein', active: 'TRUE' },
+    { school_id: 'HN-BCM', school_name: 'Bút Chì Màu', active: 'TRUE' },
+    { school_id: 'HN-VHIQ', school_name: 'Việt Hàn IQ', active: 'TRUE' },
+    { school_id: 'HN-OPK', school_name: 'Ocean Park Kids', active: 'TRUE' },
+    { school_id: 'SL-STAR', school_name: 'Sơn La Star', active: 'TRUE' },
+    { school_id: 'HN-VG', school_name: 'Việt Genius', active: 'TRUE' },
+    { school_id: 'HN-HW', school_name: 'Happy World', active: 'TRUE' },
+    { school_id: 'HN-HTN', school_name: 'Hoa Trạng Nguyên', active: 'TRUE' },
+    { school_id: 'HN-NOBEL', school_name: 'Nobel', active: 'TRUE' },
+    { school_id: 'HN-TGKN', school_name: 'Thế giới kẹo ngọt', active: 'TRUE' },
+    { school_id: 'PT-Z121', school_name: 'Z121', active: 'TRUE' },
+    { school_id: 'NA-HH', school_name: 'MN Hoa Hồng', active: 'TRUE' },
+    { school_id: 'HN-TL', school_name: 'MN Thanh Lâm', active: 'TRUE' },
+    { school_id: 'HN-VSKTL', school_name: 'VSK Thăng Long', active: 'TRUE' }
   ],
   defaultUploaders: [
     { teacher_id: 'UP-HOANG-NHUNG', teacher_name: 'Hoàng Nhung', teacher_pin: '1234', active: 'TRUE' }
@@ -70,9 +100,7 @@ function handleMediaLibraryAdminCatalogAction_(action, payload) {
 function seedMediaCatalogDefaults_(data) {
   setupMediaCatalogSheets_();
   const years = data.years && data.years.length ? data.years : SUNBOT_MEDIA_ADMIN_CATALOG.defaultYears;
-  const schools = data.schools && data.schools.length ? data.schools : SUNBOT_MEDIA_ADMIN_CATALOG.defaultSchools.map(function(name) {
-    return { school_id: mediaCatalogSchoolId_(name), school_name: name, active: 'TRUE' };
-  });
+  const schools = data.schools && data.schools.length ? data.schools : SUNBOT_MEDIA_ADMIN_CATALOG.defaultSchools;
   const uploaders = data.uploaders && data.uploaders.length ? data.uploaders : SUNBOT_MEDIA_ADMIN_CATALOG.defaultUploaders;
 
   years.forEach(upsertMediaCatalogYear_);
