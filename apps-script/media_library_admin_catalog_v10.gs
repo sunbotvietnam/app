@@ -104,6 +104,20 @@ const SUNBOT_MEDIA_ADMIN_CATALOG = {
     { school_id: 'NA-GREEN', school_name: 'Nghệ An - Green', active: 'TRUE' }
   ],
   defaultUploaders: [
+    { teacher_id: 'TCH-TTH-001', teacher_name: 'Trần Thị Hằng', teacher_pin: '1234', active: 'TRUE' },
+    { teacher_id: 'TCH-MVD-002', teacher_name: 'Mong Văn Dương', teacher_pin: '5678', active: 'TRUE' },
+    { teacher_id: 'TCH-NTD-003', teacher_name: 'Nguyễn Thị Danh', teacher_pin: '9012', active: 'TRUE' },
+    { teacher_id: 'TCH-ĐTLP-004', teacher_name: 'Đậu Thị Lan Phương', teacher_pin: '3456', active: 'TRUE' },
+    { teacher_id: 'TCH-TPA-005', teacher_name: 'Trần Phương Anh', teacher_pin: '7890', active: 'TRUE' },
+    { teacher_id: 'TCH-TTL-006', teacher_name: 'Trịnh Thị Lý', teacher_pin: '1234', active: 'TRUE' },
+    { teacher_id: 'TCH-ĐTMH-007', teacher_name: 'Đỗ Thị Minh Hằng', teacher_pin: '5678', active: 'TRUE' },
+    { teacher_id: 'TCH-NTP-008', teacher_name: 'Nguyễn Thị Phương', teacher_pin: '9012', active: 'TRUE' },
+    { teacher_id: 'TCH-TPT-009', teacher_name: 'Trần Phương Thảo', teacher_pin: '3456', active: 'TRUE' },
+    { teacher_id: 'TCH-ĐTL-010', teacher_name: 'Đặng Thái Ly', teacher_pin: '7890', active: 'TRUE' },
+    { teacher_id: 'TCH-PTTH-011', teacher_name: 'Phan Thị Thu Hạnh', teacher_pin: '1234', active: 'TRUE' },
+    { teacher_id: 'TCH-LTD-012', teacher_name: 'Lê Thị Dung', teacher_pin: '5678', active: 'TRUE' },
+    { teacher_id: 'TCH-ĐTLP-013', teacher_name: 'Đậu Thị Lan Phương', teacher_pin: '9012', active: 'TRUE' },
+    { teacher_id: 'TCH-NTA-014', teacher_name: 'Minh Thu', teacher_pin: '3456', active: 'TRUE' },
     { teacher_id: 'UP-HOANG-NHUNG', teacher_name: 'Hoàng Nhung', teacher_pin: '1234', active: 'TRUE' }
   ]
 };
