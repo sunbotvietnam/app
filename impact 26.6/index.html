@@ -244,12 +244,27 @@ let ADMIN_ASSETS = [];
 let EDIT_CONTEXT = null;
 let CATALOG_ADMIN_UNLOCKED = false;
 const ADMIN_PIN = '6868';
+const LAST_SESSION_KEY = 'sunbot_media_last_session_v1';
 const FALLBACK_YEARS = [
   {year_id:'before_2026', year_name:'Trước 2026'},
   {year_id:'2526', year_name:'Năm học 2025-2026'},
   {year_id:'2627', year_name:'Năm học 2026-2027'}
 ];
 const FALLBACK_UPLOADERS = [
+  {teacher_id:'TCH-TTH-001', teacher_name:'Trần Thị Hằng', teacher_pin:'1234'},
+  {teacher_id:'TCH-MVD-002', teacher_name:'Mong Văn Dương', teacher_pin:'5678'},
+  {teacher_id:'TCH-NTD-003', teacher_name:'Nguyễn Thị Danh', teacher_pin:'9012'},
+  {teacher_id:'TCH-ĐTLP-004', teacher_name:'Đậu Thị Lan Phương', teacher_pin:'3456'},
+  {teacher_id:'TCH-TPA-005', teacher_name:'Trần Phương Anh', teacher_pin:'7890'},
+  {teacher_id:'TCH-TTL-006', teacher_name:'Trịnh Thị Lý', teacher_pin:'1234'},
+  {teacher_id:'TCH-ĐTMH-007', teacher_name:'Đỗ Thị Minh Hằng', teacher_pin:'5678'},
+  {teacher_id:'TCH-NTP-008', teacher_name:'Nguyễn Thị Phương', teacher_pin:'9012'},
+  {teacher_id:'TCH-TPT-009', teacher_name:'Trần Phương Thảo', teacher_pin:'3456'},
+  {teacher_id:'TCH-ĐTL-010', teacher_name:'Đặng Thái Ly', teacher_pin:'7890'},
+  {teacher_id:'TCH-PTTH-011', teacher_name:'Phan Thị Thu Hạnh', teacher_pin:'1234'},
+  {teacher_id:'TCH-LTD-012', teacher_name:'Lê Thị Dung', teacher_pin:'5678'},
+  {teacher_id:'TCH-ĐTLP-013', teacher_name:'Đậu Thị Lan Phương', teacher_pin:'9012'},
+  {teacher_id:'TCH-NTA-014', teacher_name:'Minh Thu', teacher_pin:'3456'},
   {teacher_id:'UP-HOANG-NHUNG', teacher_name:'Hoàng Nhung', teacher_pin:'1234'}
 ];
 const FALLBACK_SCHOOLS = [
@@ -378,6 +393,7 @@ function renderConfig(){
   setVal('progressUsage','school_book');
   setVal('mainUsageSelect','school_book');
   setVal('yearSelect','before_2026');
+  applyLastSession();
   onSchoolChange();
   renderPresetHint();
   attachProgressAutoRefresh();
@@ -416,7 +432,7 @@ function resizeImage(file){ return new Promise((resolve,reject)=>{ const reader=
 function fileToBase64(file){ return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve(String(r.result).split(',')[1]||''); r.onerror=reject; r.readAsDataURL(file); }); }
 function renderLocalFiles(){ document.getElementById('fileSummary').textContent=LOCAL_FILES.length?`Đã chọn ${LOCAL_FILES.length} file.`:'Chưa chọn file.'; document.getElementById('localPreview').innerHTML=LOCAL_FILES.slice(0,24).map(f=>`<div class="media-card"><div class="media-thumb">${f.preview?`<img src="${f.preview}">`:'Video/file'}</div><div class="p-2 text-xs font-bold truncate">${esc(f.file_name_original)}</div></div>`).join(''); }
 async function submitBatch(){ try{ if(!LOCAL_FILES.length) throw new Error('Chưa chọn file.'); const school=selectedSchoolForSubmit(); if(!school.school_id) throw new Error('Chưa chọn trường.'); const uploader=selected(CONFIG.teachers,'teacher_id',val('uploaderSelect')); if(!uploader.teacher_id) throw new Error('Chưa chọn người nhập.'); validateUploaderPin(uploader); const scope=val('scopeSelect'); const classes=selectedClasses(); if(scope==='class'&&!classes.length) throw new Error('Ảnh cấp lớp cần chọn ít nhất 1 lớp/lớp ghép.'); const cat=val('categorySelect'); const batch_meta={ year_id:val('yearSelect'), school_id:school.school_id, school_name:school.school_name, uploader_id:uploader.teacher_id, uploader_name:uploader.teacher_name, uploader_pin:val('uploaderPin'), scope, class_ids:classes.map(c=>c.class_id), class_names:classes.map(c=>c.class_name), class_id:classes[0]?.class_id||'', class_name:classes[0]?.class_name||'', primary_category:cat, main_usage:val('mainUsageSelect'), consent_status:val('consentSelect'), batch_note:val('batchNote'), ad_hoc_school:school.ad_hoc_school||'' };
-      showLoading(true,'Đang gửi gói ảnh...'); const out=await post('media_library_batch_upload',{batch_meta,files:LOCAL_FILES.map(f=>({file_name_original:f.file_name_original,mime_type:f.mime_type,size:f.size,upload_size:f.upload_size,base64:f.base64,preview:f.preview,file_type:f.file_type}))}); SESSION_ASSETS=out.assets||[]; document.getElementById('lastBatchLabel').textContent=`${out.batch_name||''} · ${SESSION_ASSETS.length} file · ${out.batch_id||''}`; renderSession(); LOCAL_FILES=[]; document.getElementById('fileInput').value=''; renderLocalFiles(); showMsg('Đã nhập gói ảnh: '+(out.batch_name||out.batch_id)+` · Mới: ${out.new_count||0} · Trùng: ${out.duplicate_count||0} · Cần review: ${out.needs_review_count||0}`); switchTab('session'); } catch(e){ showMsg(e.message,'err'); } finally{ showLoading(false); } }
+      showLoading(true,'Đang gửi gói ảnh...'); const out=await post('media_library_batch_upload',{batch_meta,files:LOCAL_FILES.map(f=>({file_name_original:f.file_name_original,mime_type:f.mime_type,size:f.size,upload_size:f.upload_size,base64:f.base64,preview:f.preview,file_type:f.file_type}))}); saveLastSession({year_id:batch_meta.year_id,uploader_id:batch_meta.uploader_id,uploader_pin:batch_meta.uploader_pin,school_name:batch_meta.school_name,scope:batch_meta.scope,main_usage:batch_meta.main_usage,consent_status:batch_meta.consent_status}); SESSION_ASSETS=out.assets||[]; document.getElementById('lastBatchLabel').textContent=`${out.batch_name||''} · ${SESSION_ASSETS.length} file · ${out.batch_id||''}`; renderSession(); LOCAL_FILES=[]; document.getElementById('fileInput').value=''; renderLocalFiles(); showMsg('Đã nhập gói ảnh: '+(out.batch_name||out.batch_id)+` · Mới: ${out.new_count||0} · Trùng: ${out.duplicate_count||0} · Cần review: ${out.needs_review_count||0}`); switchTab('session'); } catch(e){ showMsg(e.message,'err'); } finally{ showLoading(false); } }
 function selectedSchoolForSubmit(){
   const school=resolveSchoolFromInput();
   if(!school.school_id) throw new Error('Vui lòng chọn trường từ danh sách gợi ý.');
@@ -433,7 +449,10 @@ function resolveSchoolFromInput(){
 }
 function validateUploaderPin(uploader){
   const saved = String(uploader.teacher_pin || uploader.uploader_pin || uploader.pin || '').trim();
-  if(saved && val('uploaderPin') !== saved) throw new Error('Mật khẩu người nhập không đúng.');
+  const entered = val('uploaderPin');
+  if(!saved) throw new Error('Người nhập này chưa được cấp mật khẩu trong hệ thống. Vui lòng báo admin cập nhật trước khi nhập ảnh.');
+  if(!entered) throw new Error('Vui lòng nhập mật khẩu người nhập.');
+  if(entered !== saved) throw new Error('Mật khẩu người nhập không đúng.');
 }
 function renderSession(){ document.getElementById('sessionGrid').innerHTML=SESSION_ASSETS.map(a=>assetCard(a,'session')).join(''); }
 function assetCard(a,mode){
@@ -595,7 +614,11 @@ async function adminSaveSchool(){
     const admin_pin=requireCatalogAdmin();
     const schoolName=val('adminSchoolNameNew');
     if(!schoolName) throw new Error('Thiếu tên trường.');
-    const school={school_id:val('adminSchoolIdNew')||makeSchoolId(schoolName),school_name:schoolName,active:'TRUE'};
+    const manualId=val('adminSchoolIdNew');
+    const schoolId=manualId ? normalizeSchoolId(manualId) : makeUniqueSchoolId(schoolName);
+    ensureSchoolIdAvailable(schoolId);
+    ensureSchoolNameAvailable(schoolName);
+    const school={school_id:schoolId,school_name:schoolName,active:'TRUE'};
     await adminPostWithLocalFallback('media_library_admin_upsert_school',{admin_pin,school},()=>{ CONFIG.schools=mergeBy([...CONFIG.schools,school],'school_id').sort((a,b)=>String(a.school_name||'').localeCompare(String(b.school_name||''),'vi')); });
     renderConfig(); showMsg('Đã lưu trường: '+school.school_name);
   }catch(e){ showMsg(e.message,'err'); }
@@ -643,11 +666,51 @@ function labelCat(v){ return ((CONFIG.categories||DEMO_CATS).find(c=>c.value===v
 function scopeText(s){ return s==='school'?'Cấp trường':s==='class'?'Cấp lớp':'Chưa xác định'; }
 function driveDirect(url){ const t=String(url||''); let m=t.match(/\/d\/([^/]+)/)||t.match(/[?&]id=([^&]+)/); return m?`https://drive.google.com/uc?export=view&id=${m[1]}`:''; }
 function makeSchoolId(name){ return 'SCH-'+asciiSlug(name).slice(0,36); }
+function makeUniqueSchoolId(name){
+  const base = makeSchoolId(name);
+  const existing = new Set((CONFIG.schools||[]).map(s=>String(s.school_id||'').trim().toUpperCase()).filter(Boolean));
+  if(!existing.has(base)) return base;
+  for(let i=2;i<1000;i+=1){
+    const candidate = `${base}-${i}`;
+    if(!existing.has(candidate)) return candidate;
+  }
+  throw new Error('Không tạo được mã trường không trùng. Vui lòng nhập mã thủ công.');
+}
+function normalizeSchoolId(id){ return asciiSlug(id).slice(0,48); }
+function ensureSchoolIdAvailable(id){
+  const normalized = String(id||'').trim().toUpperCase();
+  if(!normalized) throw new Error('Thiếu mã trường.');
+  const found = (CONFIG.schools||[]).find(s=>String(s.school_id||'').trim().toUpperCase()===normalized);
+  if(found) throw new Error(`Mã trường ${normalized} đã tồn tại cho "${found.school_name}". Vui lòng dùng mã khác.`);
+}
+function ensureSchoolNameAvailable(name){
+  const normalized = normalizeText(name);
+  const found = (CONFIG.schools||[]).find(s=>normalizeText(s.school_name)===normalized);
+  if(found) throw new Error(`Tên trường này đã có trong danh mục với mã ${found.school_id}.`);
+}
 function makeUploaderId(name){ return 'UP-'+asciiSlug(name).slice(0,36); }
 function asciiSlug(text){
   return String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'NEW';
 }
 function normalizeText(text){ return String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/\s+/g,' ').trim(); }
+function saveLastSession(data){
+  try{ localStorage.setItem(LAST_SESSION_KEY, JSON.stringify(data||{})); }catch(e){}
+}
+function loadLastSession(){
+  try{ return JSON.parse(localStorage.getItem(LAST_SESSION_KEY)||'{}')||{}; }catch(e){ return {}; }
+}
+function applyLastSession(){
+  const last=loadLastSession();
+  if(last.year_id && (CONFIG.years||[]).some(y=>String(y.year_id)===String(last.year_id))) setVal('yearSelect',last.year_id);
+  if(last.uploader_id && (CONFIG.teachers||[]).some(t=>String(t.teacher_id)===String(last.uploader_id))) setVal('uploaderSelect',last.uploader_id);
+  if(last.uploader_pin) setVal('uploaderPin',last.uploader_pin);
+  if(last.school_name) setVal('schoolInput',last.school_name);
+  if(last.scope) setVal('scopeSelect',last.scope);
+  if(last.main_usage) setVal('mainUsageSelect',last.main_usage);
+  if(last.consent_status) setVal('consentSelect',last.consent_status);
+  onSchoolInputChange();
+  onScopeChange();
+}
 function esc(x){ return String(x==null?'':x).replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m])); }
 function includes(stored,token){ return String(stored||'').split(/[|;,]/).map(s=>s.trim()).includes(String(token)); }
 function fmtTime(x){ return String(x||'').replace('T',' ').slice(0,16); }
