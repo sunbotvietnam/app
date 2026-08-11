@@ -244,8 +244,6 @@
   function hubTeacherId(){ const u=state.auth.user||{}, p=state.auth.teacherProfile||{}; return p.TeacherID||u.TeacherID||u.teacher_id||u.UserID||u.Username||u.username||''; }
   function displayTeacherName(name, id){
     const rawName = String(name || '');
-    const rawId = String(id || '');
-    if(rawId.toUpperCase()==='GV-0016') return 'Giáo viên Test';
     return rawName;
   }
   function hubRoleRaw(){ const u=state.auth.user||{}; return String(u.PermissionGroupID||u.role_id||u.Role||u.role||'').toUpperCase().trim(); }
@@ -851,17 +849,18 @@
           Phạm vi đang thao tác: <b>${esc(currentTenantId())}</b> · <b>${esc(currentSchoolYearId())}</b>. Giáo viên/trường/lớp tạo mới sẽ được ghi theo phạm vi này.
         </div>
         <div class="rounded-xl bg-orange-50 border border-orange-100 p-3 text-[12px] text-orange-800 leading-relaxed">
-          Tài khoản mới dùng backend Teacher Academy. Với tài khoản cũ, hệ thống sẽ gửi yêu cầu đổi ID/mật khẩu về backend. Mỗi thao tác cần qua bước xác nhận quản trị cuối cùng.
+          Hệ thống tự sinh mã giáo viên ổn định. Người dùng có thể đăng nhập bằng mã, email hoặc alias không dấu. Mỗi thao tác cần qua bước xác nhận quản trị cuối cùng.
         </div>
         <div class="grid grid-cols-2 gap-2">
           <input id="acctName" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Họ tên giáo viên" />
-          <input id="acctId" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="ID/email đăng nhập" />
+          <input id="acctEmail" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Email đăng nhập nếu có" />
+          <input id="acctAlias" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Alias dễ nhớ: toha, thuyanh..." />
           <input id="acctPass" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Mật khẩu/PIN" />
           <input id="acctRegion" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Khu vực: HN/NA..." />
         </div>
         <div class="grid grid-cols-2 gap-2">
           <select id="acctRole" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400">
-            <option>Teacher</option><option>Admin</option><option>Ambassador</option>
+            <option>Teacher</option><option>SSC</option><option>Admin</option><option>Ambassador</option>
           </select>
           <button id="btnCreateAccount" class="h-10 rounded-xl bg-orange-500 text-white text-[13px] font-bold active-scale">${acc.loading?'Đang xử lý...':'Cấp tài khoản mới'}</button>
         </div>
@@ -872,7 +871,7 @@
               <option value="">Chọn giáo viên cần đổi</option>
               ${teachers.map(t=>`<option value="${esc(t.teacher_id)}">${esc(t.teacher_name)} · ${esc(t.teacher_id)}</option>`).join('')}
             </select>
-            <input id="acctNewId" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="ID/email mới, nếu đổi" />
+            <input id="acctNewId" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Email/alias đăng nhập mới" />
             <input id="acctNewPass" class="h-10 rounded-lg border border-gray-200 px-3 outline-none focus:border-orange-400" placeholder="Mật khẩu/PIN mới" />
             <button id="btnUpdateAccount" class="h-10 rounded-xl bg-gray-900 text-white text-[13px] font-bold active-scale">${acc.loading?'Đang xử lý...':'Cập nhật tài khoản'}</button>
           </div>
@@ -1118,12 +1117,13 @@
     if(!isHubAdmin()) return;
     const teacher = {
       FullName: norm(($('acctName')||{}).value),
-      Email: norm(($('acctId')||{}).value),
+      Email: norm(($('acctEmail')||{}).value),
+      UsernameAlias: norm(($('acctAlias')||{}).value),
       Pin: norm(($('acctPass')||{}).value),
       Region: norm(($('acctRegion')||{}).value) || currentTenantId(),
       Role: (($('acctRole')||{}).value || 'Teacher')
     };
-    if(!teacher.FullName || !teacher.Email || !teacher.Pin){ state.accountAdmin.error='Cần nhập đủ họ tên, ID/email và mật khẩu.'; state.accountAdmin.ok=''; render(); return; }
+    if(!teacher.FullName || !teacher.Pin || (!teacher.Email && !teacher.UsernameAlias)){ state.accountAdmin.error='Cần nhập họ tên, mật khẩu và ít nhất email hoặc alias đăng nhập.'; state.accountAdmin.ok=''; render(); return; }
     const super_code = askSuperAdminCode();
     if(!super_code) return;
     state.accountAdmin.loading=true; state.accountAdmin.error=''; state.accountAdmin.ok=''; render();
@@ -1131,11 +1131,11 @@
       const r = await postText(TRAINING_BACKEND_URL,{action:'create_teacher_user',token:state.auth.token,teacher,source:'teacher_hub_admin'});
       if(!r.success) throw new Error(r.message || 'Không tạo được tài khoản.');
       const teacherId = r.teacher?.TeacherID || r.teacher?.teacher_id || r.teacher?.TeacherId || r.user?.UserID || teacher.Email;
-      const ops = await postText(WEB_APP_URL,{action:'admin_upsert_operational_master',super_code,tenant_id:teacher.Region,school_year_id:currentSchoolYearId(),data:{teachers:[{teacher_id:teacherId,teacher_name:teacher.FullName,teacher_email:teacher.Email,active:true}]},source:'teacher_hub_admin'});
+      const ops = await postText(WEB_APP_URL,{action:'admin_upsert_operational_master',super_code,tenant_id:teacher.Region,school_year_id:currentSchoolYearId(),data:{teachers:[{teacher_id:teacherId,teacher_name:teacher.FullName,teacher_email:teacher.Email,teacher_pin:teacher.Pin,username_alias:teacher.UsernameAlias,active:true}]},source:'teacher_hub_admin'});
       if(ops.status !== 'success') throw new Error(ops.message || 'Đã tạo tài khoản nhưng chưa đồng bộ được danh mục giáo viên.');
-      state.accountAdmin.ok = 'Đã tạo tài khoản: ' + (r.user?.Username || teacher.Email);
+      state.accountAdmin.ok = 'Đã tạo tài khoản: ' + teacherId + '. Có thể đăng nhập bằng mã này' + (teacher.Email ? ', email' : '') + (teacher.UsernameAlias ? ', alias' : '') + '.';
       await syncHubProfile();
-      await loadConfig();
+      await loadConfig(true);
     }catch(err){ state.accountAdmin.error = err.message || String(err); }
     finally{ state.accountAdmin.loading=false; render(); }
   }
