@@ -1133,6 +1133,7 @@
       const teacherId = r.teacher?.TeacherID || r.teacher?.teacher_id || r.teacher?.TeacherId || r.user?.UserID || teacher.Email;
       const ops = await postText(WEB_APP_URL,{action:'admin_upsert_operational_master',super_code,tenant_id:teacher.Region,school_year_id:currentSchoolYearId(),data:{teachers:[{teacher_id:teacherId,teacher_name:teacher.FullName,teacher_email:teacher.Email,teacher_pin:teacher.Pin,username_alias:teacher.UsernameAlias,active:true}]},source:'teacher_hub_admin'});
       if(ops.status !== 'success') throw new Error(ops.message || 'Đã tạo tài khoản nhưng chưa đồng bộ được danh mục giáo viên.');
+      await postText(WEB_APP_URL,{action:'admin_sync_app_users_from_teacher_master',super_code,teacher_id:teacherId,source:'teacher_hub_admin'});
       state.accountAdmin.ok = 'Đã tạo tài khoản: ' + teacherId + '. Có thể đăng nhập bằng mã này' + (teacher.Email ? ', email' : '') + (teacher.UsernameAlias ? ', alias' : '') + '.';
       await syncHubProfile();
       await loadConfig(true);
@@ -1186,13 +1187,21 @@
     const Pin = norm(($('acctNewPass')||{}).value);
     if(!TeacherID){ state.accountAdmin.error='Cần chọn giáo viên cần đổi.'; state.accountAdmin.ok=''; render(); return; }
     if(!Username && !Pin){ state.accountAdmin.error='Cần nhập ID/email mới hoặc mật khẩu mới.'; state.accountAdmin.ok=''; render(); return; }
-    if(!confirmAccountAdminCode()) return;
+    const super_code = askSuperAdminCode();
+    if(!super_code) return;
     state.accountAdmin.loading=true; state.accountAdmin.error=''; state.accountAdmin.ok=''; render();
     try{
       const r = await postText(TRAINING_BACKEND_URL,{action:'admin_update_teacher_credentials',token:state.auth.token,teacher:{TeacherID,Username,Email:Username,Pin},source:'teacher_hub_admin'});
       if(!r.success) throw new Error(r.message || 'Backend chưa cập nhật được tài khoản.');
+      const currentTeacher = (state.config.teachers || []).find(t=>String(t.teacher_id)===String(TeacherID)) || {};
+      const aliasPatch = Username && !Username.includes('@') ? Username : '';
+      const emailPatch = Username && Username.includes('@') ? Username : (currentTeacher.teacher_email || '');
+      const ops = await postText(WEB_APP_URL,{action:'admin_upsert_operational_master',super_code,tenant_id:currentTenantId(),school_year_id:currentSchoolYearId(),data:{teachers:[{teacher_id:TeacherID,teacher_name:currentTeacher.teacher_name || TeacherID,teacher_email:emailPatch,teacher_pin:Pin,username_alias:aliasPatch,active:true}]},source:'teacher_hub_admin'});
+      if(ops.status !== 'success') throw new Error(ops.message || 'Đã cập nhật Hub nhưng chưa đồng bộ được TEACHER_MASTER.');
+      await postText(WEB_APP_URL,{action:'admin_sync_app_users_from_teacher_master',super_code,teacher_id:TeacherID,source:'teacher_hub_admin'});
       state.accountAdmin.ok = 'Đã cập nhật tài khoản ' + TeacherID + '.';
       await syncHubProfile();
+      await loadConfig(true);
     }catch(err){ state.accountAdmin.error = err.message || String(err); }
     finally{ state.accountAdmin.loading=false; render(); }
   }
