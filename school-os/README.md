@@ -1,60 +1,61 @@
 # Sunbot School OS V3
 
-Hệ điều hành phát triển trường dành cho Sunbot, thiết kế theo nguyên tắc: staff chỉ nhìn thấy phần việc cần làm; độ phức tạp nằm phía sau hệ thống.
+Ứng dụng điều hành phát triển trường Sunbot, giao diện tiếng Việt và tối ưu để staff không phải hiểu độ phức tạp phía sau.
 
-## Giao diện staff
+## Staff nhìn thấy
 
-Staff chỉ dùng 4 khu vực chính:
+- Hôm nay
+- Trường học
+- Việc cần làm
+- Cơ hội
 
-1. Hôm nay
-2. Trường học
-3. Việc cần làm
-4. Cơ hội
-
-Các lớp sâu như stakeholder, email, tracked document, qualification, renewal và handoff chỉ hiện trong đúng ngữ cảnh của hồ sơ trường.
-
-## Giao diện quản lý
-
-Quản lý có thêm:
+## Quản lý nhìn thêm
 
 - Hiệu suất bán hàng
 - Dự báo & gia hạn
-- Kết nối backend
+- Kết nối dữ liệu / cấu hình triển khai
 
-## Luồng nghiệp vụ lõi
+## Kiến trúc V3
 
-Trường -> Người liên hệ -> Giao tiếp -> Bước tiếp theo -> Công việc -> Cơ hội -> Đề xuất -> Quyết định -> Bàn giao / Gia hạn.
+- `v3.html`: UI nghiệp vụ ổn định.
+- `state-bridge.js`: bridge state của UI cho các runtime module.
+- `app-config.js`: cấu hình triển khai không chứa bí mật.
+- `backend-adapter.js`: transport/session/API client.
+- `runtime-patch.js`: email + tracked link + activity integration.
+- `multiuser-runtime.js`: login, role UI, load dữ liệu, record-level persistence.
+- Apps Script backend: auth, Gmail, tracked link, event store, record APIs.
 
-## Backend runtime
+## Multi-user
 
-Entry point `school-os/index.html` mở `v3-runtime.html`.
+Backend dùng record-level mutation cho:
 
-Runtime load:
+- School
+- Contact
+- Task
+- Opportunity
 
-- `v3.html`: UI/UX V3 ổn định
-- `backend-adapter.js`: API adapter
-- `runtime-patch.js`: nối UI V3 với backend mà không sửa trực tiếp khối UI lớn
+Mỗi record có `record_version`. Khi client sửa bản cũ, backend trả `RECORD_VERSION_CONFLICT` và frontend tải lại dữ liệu thay vì ghi đè.
 
-Apps Script backend:
+## Authentication
 
-`apps-script/school_os_sales_services_v01.gs`
+- Login bằng email + mật khẩu.
+- Password lưu hash + salt, không lưu rõ.
+- Session 12 giờ, token backend chỉ lưu dạng hash.
+- Role: SUPER_ADMIN, ADMIN, LEADER, STAFF.
 
-Hỗ trợ:
+## Email & tracking
 
-- gửi Gmail;
-- tạo tracked document link;
-- ghi nhận link được mở;
-- unified activity/event log;
-- đồng bộ event về timeline của trường.
+- Email gửi qua Gmail backend.
+- Tài liệu có unique tracked link.
+- Mở tài liệu tạo `LINK_OPENED` và hot signal trong activity feed.
+- Không dùng tracking pixel như tín hiệu chính.
 
-## Chế độ an toàn
+## Ranh giới sản phẩm
 
-Nếu backend chưa cấu hình, app hiển thị `Backend: Demo` và không gửi email thật.
+School OS quản lý quan hệ trường, stakeholder, task, opportunity, proposal/decision, renewal và handover.
 
-Nếu backend được kết nối và kiểm tra thành công, cùng nút `Gửi email` sẽ gọi Apps Script và chỉ báo đã gửi khi backend trả thành công.
+Không quản lý chi tiết lớp học, học sinh, attendance, assessment hay robot inventory vận hành. Các hệ khác liên kết bằng `school_id`.
 
-Xem `BACKEND_SETUP.md` để triển khai.
+## Production status
 
-## Tiếp theo
-
-Core data hiện vẫn chủ yếu chạy bằng localStorage. Bước tiếp theo là chuyển dần Schools, Contacts, Tasks, Opportunities, Documents và Renewals sang backend chuẩn hóa nhưng giữ nguyên UI V3.
+Code foundation đã có, nhưng chưa deploy backend thật từ repo. Trước khi merge production phải test end-to-end: health, login, role, conflict, Gmail, tracked link và cross-origin trên đúng domain/browser staff dùng.
