@@ -1,4 +1,4 @@
-/* Sunbot School OS V3 runtime backend integration v0.1 */
+/* Sunbot School OS V3 runtime backend integration v0.2 */
 (function(){
   'use strict';
 
@@ -9,6 +9,9 @@
   function docs(){try{return JSON.parse(localStorage.getItem(DOC_KEY)||'{}')}catch(e){return{}}}
   function nowVi(){return new Date().toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
   function safe(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+  function appState(){return typeof state!=='undefined'?state:null;}
+  function activeSchoolId(){return typeof current!=='undefined'?current:null;}
+  function activeTab(){return typeof currentTab!=='undefined'?currentTab:'';}
 
   function installUi(){
     const top=document.querySelector('.top');
@@ -22,7 +25,7 @@
       const wrap=document.createElement('div');
       wrap.innerHTML=`<div class="modal" id="backendForm"><div class="modalbox"><h2>Kết nối School OS Backend</h2><div class="muted">Chỉ quản lý cần cấu hình một lần trên thiết bị. Staff không phải thao tác phần này.</div><div class="form"><div class="field full"><label>Web App URL (Apps Script)</label><input id="beUrl" placeholder="https://script.google.com/macros/s/.../exec"></div><div class="field full"><label>API key</label><input id="beKey" type="password" placeholder="API key từ schoolOsSetup()"></div><div class="field full"><label>Link gốc Sunbot Profile 2026</label><input id="docProfile" placeholder="https://drive.google.com/... hoặc link public"></div><div class="field full"><label>Link gốc Proposal chương trình</label><input id="docProposal" placeholder="https://drive.google.com/... hoặc link public"></div><div class="field full"><label>Link gốc Báo giá</label><input id="docQuote" placeholder="https://drive.google.com/... hoặc link public"></div></div><div class="modalactions"><button class="btn" id="beTest">Kiểm tra kết nối</button><button class="btn" id="beCancel">Hủy</button><button class="btn primary" id="beSave">Lưu cấu hình</button></div></div></div>`;
       document.body.appendChild(wrap.firstElementChild);
-      $('beTest').onclick=testBackend;$('beCancel').onclick=()=>closeBackend();$('beSave').onclick=saveBackendConfig;
+      $('beTest').onclick=testBackend;$('beCancel').onclick=closeBackend;$('beSave').onclick=saveBackendConfig;
     }
     updateBackendStatus();
   }
@@ -60,7 +63,8 @@
   }
 
   async function sendEmailLive(){
-    const s=window.state?.schools?.find(x=>x.id===window.current);
+    const st=appState(),schoolId=activeSchoolId();
+    const s=st?.schools?.find(x=>x.id===schoolId);
     if(!s)return window.toast?.('Chưa chọn trường');
     const doc=$('emailDoc')?.value||'',to=$('emailContact')?.value||'',subject=$('emailSubject')?.value.trim()||'',body=$('emailBody')?.value.trim()||'';
     if(!to.includes('@'))return window.toast?.('Người liên hệ chưa có email hợp lệ');
@@ -68,7 +72,7 @@
     if(!window.SchoolOsBackend?.isConfigured?.()){
       s.events=s.events||[];
       s.events.unshift({type:'email',title:'Email demo: '+subject,detail:`Tới ${to}${doc?' · Link demo: '+doc:''}`,at:nowVi(),local:true});
-      window.closeModal?.('emailForm');window.refresh?.();window.openSchool?.(s.id);window.currentTab='engagement';window.renderDrawer?.();
+      window.closeModal?.('emailForm');window.refresh?.();window.openSchool?.(s.id);if(typeof currentTab!=='undefined')currentTab='engagement';window.renderDrawer?.();
       return window.toast?.('Đang ở chế độ demo; chưa gửi email thật');
     }
     const d=docs(),docUrl=doc?d[doc]||'':'';
@@ -84,14 +88,14 @@
       });
       s.events=s.events||[];
       s.events.unshift({id:result.email_id,type:'email',title:'Đã gửi email: '+subject,detail:`Tới ${to}${doc?' · Có link theo dõi: '+doc:''}`,at:nowVi(),local:true});
-      window.closeModal?.('emailForm');window.refresh?.();window.openSchool?.(s.id);window.currentTab='engagement';window.renderDrawer?.();
+      window.closeModal?.('emailForm');window.refresh?.();window.openSchool?.(s.id);if(typeof currentTab!=='undefined')currentTab='engagement';window.renderDrawer?.();
       window.toast?.('Email đã gửi và được ghi dấu vết');
     }catch(e){window.toast?.('Gửi email lỗi: '+e.message);}
   }
 
   async function syncSchoolActivity(schoolId,silent){
     if(!window.SchoolOsBackend?.isConfigured?.())return !silent&&window.toast?.('Backend chưa được kết nối');
-    const s=window.state?.schools?.find(x=>x.id===schoolId);if(!s)return;
+    const st=appState(),s=st?.schools?.find(x=>x.id===schoolId);if(!s)return;
     try{
       const r=await SchoolOsBackend.getActivity(schoolId,100);s.events=s.events||[];
       const seen=new Set(s.events.map(e=>e.id).filter(Boolean));
@@ -106,17 +110,17 @@
           hot:String(a.hot_signal).toUpperCase()==='TRUE'||a.hot_signal===true
         });
       }
-      window.refresh?.();if(window.current===schoolId)window.renderDrawer?.();
+      window.refresh?.();if(activeSchoolId()===schoolId)window.renderDrawer?.();
       if(!silent)window.toast?.('Đã đồng bộ dấu vết mới');
     }catch(e){if(!silent)window.toast?.('Đồng bộ lỗi: '+e.message);}
   }
 
   function enhanceEngagement(){
-    if(window.currentTab!=='engagement')return;
+    if(activeTab()!=='engagement')return;
     const body=$('dBody'),head=body&&body.querySelector('.sectionhead div:last-child');
     if(head&&!body.querySelector('[data-sync-tracking]')){
       const b=document.createElement('button');b.className='btn small';b.textContent='Đồng bộ dấu vết';b.dataset.syncTracking='1';
-      b.onclick=()=>syncSchoolActivity(window.current,false);head.appendChild(document.createTextNode(' '));head.appendChild(b);
+      b.onclick=()=>syncSchoolActivity(activeSchoolId(),false);head.appendChild(document.createTextNode(' '));head.appendChild(b);
     }
   }
 
@@ -132,7 +136,7 @@
 
     originals.saveInteraction=window.saveInteraction;
     if(originals.saveInteraction)window.saveInteraction=async function(){
-      const s=window.state?.schools?.find(x=>x.id===window.current);
+      const st=appState(),s=st?.schools?.find(x=>x.id===activeSchoolId());
       const summary=$('ir')?.value.trim()||'',actor=$('io')?.value||'',channel=$('ic')?.value||'';
       const r=originals.saveInteraction.apply(this,arguments);
       if(s&&summary&&window.SchoolOsBackend?.isConfigured?.()){
