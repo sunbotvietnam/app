@@ -1,136 +1,238 @@
-# Sunbot School OS – Hướng dẫn bật backend thật
+# Sunbot School OS – Triển khai backend và multi-user
 
-## 1. Trạng thái hiện tại
+## 1. Mục tiêu production
 
-School OS V3 có 2 chế độ:
+Staff chỉ cần:
 
-- `Backend: Demo`: không gửi email thật; dữ liệu nghiệp vụ demo vẫn lưu trên trình duyệt.
-- `Backend: Đã kết nối`: email, tracked link và activity/event dùng Apps Script backend.
+1. Mở School OS.
+2. Đăng nhập bằng email + mật khẩu.
+3. Làm việc trong 4 khu vực: Hôm nay, Trường học, Việc cần làm, Cơ hội.
 
-Staff không cần cấu hình backend. Phần kết nối chỉ hiện trong `Chế độ quản lý`.
+Staff không nhập Web App URL, không nhìn API key và không thao tác cấu hình kỹ thuật.
 
-## 2. Backend hiện có
+## 2. Thành phần backend
 
-File Apps Script:
+Apps Script project cần các file:
 
-`apps-script/school_os_sales_services_v01.gs`
+- `school_os_sales_services_v01.gs` – router Web App, Gmail, tracked link, activity.
+- `school_os_core_data_v01.gs` – snapshot/migration cũ, chỉ dùng khi cần.
+- `school_os_auth_v01.gs` – user, password hash, session, role.
+- `school_os_record_api_v01.gs` – API theo từng record, version conflict, soft delete.
 
-Service hỗ trợ:
+Các sheet chính:
 
-1. `send_email`
-2. `create_tracked_link`
-3. `log_activity`
-4. `get_activity`
-5. `health`
-
-Các sheet được tạo tự động:
-
+- `SO_SCHOOLS`
+- `SO_CONTACTS`
+- `SO_TASKS`
+- `SO_OPPORTUNITIES`
 - `SO_ACTIVITIES`
 - `SO_TRACKED_LINKS`
 - `SO_EMAIL_LOG`
+- `SO_USERS`
+- `SO_SESSIONS`
+- `SO_META`
 
-## 3. Khởi tạo
+## 3. Khởi tạo backend
 
-1. Tạo một Apps Script project riêng cho School OS.
-2. Copy nội dung `school_os_sales_services_v01.gs` vào project.
-3. Chạy hàm `schoolOsSetup()` một lần bằng tài khoản Google được phép gửi email Sunbot.
-4. Cấp quyền Google theo yêu cầu.
-5. Hàm setup sẽ:
-   - tạo spreadsheet `SUNBOT_SCHOOL_OS_DATA` nếu chưa có;
-   - tạo 3 bảng dữ liệu;
-   - tạo API key trong Script Properties.
-6. Lưu lại:
-   - Spreadsheet URL;
-   - API key.
+1. Tạo Apps Script project riêng cho School OS.
+2. Copy 4 file backend vào project.
+3. Chạy `schoolOsSetup()` một lần bằng tài khoản Google vận hành Sunbot.
+4. Cấp quyền Sheets/Gmail theo yêu cầu.
+5. Lưu Spreadsheet URL và API key ở nơi quản trị an toàn.
+6. Không commit API key vào GitHub.
 
-Không commit API key vào GitHub.
+`schoolOsSetup()` tạo/kiểm tra toàn bộ sheet và bổ sung các cột `record_version`, `updated_by`, `deleted_at` cho dữ liệu multi-user.
 
-## 4. Deploy Web App
+## 4. Tạo tài khoản người dùng
+
+Không tạo mật khẩu mặc định trong source code.
+
+Từ Apps Script editor, quản trị viên chạy trực tiếp:
+
+```javascript
+schoolOsCreateOrResetUser(
+  'email-thuc-te@domain.vn',
+  'Tên nhân sự',
+  'STAFF',
+  'Hà Nội',
+  'mat-khau-khoi-tao-an-toan'
+)
+```
+
+Role hỗ trợ:
+
+- `SUPER_ADMIN`
+- `ADMIN`
+- `LEADER`
+- `STAFF`
+
+Mật khẩu không lưu dạng rõ. Backend lưu SHA-256 hash + salt riêng cho từng user.
+
+Khi reset mật khẩu, mọi session cũ của user bị thu hồi.
+
+## 5. Phân quyền
+
+### STAFF
+
+- Chỉ dùng giao diện staff.
+- Truy cập trường thuộc phạm vi owner/khu vực được phân.
+- Tạo/sửa task, opportunity, activity trong phạm vi được phép.
+- Không truy cập dashboard quản trị.
+
+### LEADER
+
+- Có giao diện quản lý.
+- Xem dữ liệu điều hành và hiệu suất theo phạm vi quản lý.
+
+### ADMIN / SUPER_ADMIN
+
+- Quản trị toàn hệ thống.
+- Bootstrap/migration/configuration.
+
+## 6. Deploy Web App
 
 Deploy Apps Script dưới dạng Web App.
 
-Khuyến nghị giai đoạn nội bộ:
+Khuyến nghị pilot nội bộ:
 
 - Execute as: tài khoản vận hành Sunbot.
-- Access: phạm vi phù hợp với cách frontend gọi service.
+- Access: cấu hình phù hợp để frontend gọi Web App.
 
-Sau deploy, lấy URL dạng:
+Lấy URL dạng:
 
 `https://script.google.com/macros/s/.../exec`
 
-## 5. Kết nối từ School OS
+## 7. Cấu hình frontend một lần
 
-1. Mở School OS.
-2. Chuyển `Chế độ quản lý`.
-3. Bấm `Backend: Demo`.
-4. Nhập:
-   - Web App URL;
-   - API key;
-   - Link gốc Profile Sunbot;
-   - Link gốc Proposal;
-   - Link gốc Báo giá.
-5. Bấm `Kiểm tra kết nối`.
-6. Chỉ khi app báo `Kết nối backend thành công` mới bật gửi email thật.
+Sửa file:
 
-## 6. Kiểm thử bắt buộc trước khi dùng thật
+`school-os/app-config.js`
 
-### Test A – Health
+```javascript
+window.SCHOOL_OS_CONFIG = {
+  environment: 'production',
+  backendUrl: 'https://script.google.com/macros/s/.../exec',
+  schoolYear: '2026–2027'
+};
+```
 
-App phải đọc được phản hồi `status=ok`.
+`backendUrl` không phải bí mật nên có thể nằm trong frontend.
 
-### Test B – Email nội bộ
+Không đưa API key vào `app-config.js`.
 
-Gửi một email thử tới địa chỉ nội bộ, không gửi khách hàng ngay.
+Sau bước này staff không cần cấu hình URL trên thiết bị cá nhân.
 
-Xác minh:
+## 8. Record-level API
 
-- email đến đúng người;
-- subject/body đúng;
-- `SO_EMAIL_LOG` có bản ghi;
-- `SO_ACTIVITIES` có `EMAIL_SENT`.
+Production dùng:
 
-### Test C – Tracked link
+- `list_core_records`
+- `upsert_school`
+- `upsert_contact`
+- `upsert_task`
+- `upsert_opportunity`
+- `delete_record`
 
-Gửi email nội bộ có một link tài liệu.
+Mỗi record có `record_version`.
 
-Bấm link và xác minh:
+Frontend gửi `expected_version` khi cập nhật. Nếu record đã được người khác sửa, backend trả:
 
-- chuyển đúng tài liệu gốc;
-- `SO_TRACKED_LINKS.open_count` tăng;
-- có `first_open_at`, `last_open_at`;
-- `SO_ACTIVITIES` xuất hiện `LINK_OPENED`;
-- mở lại School OS và bấm `Đồng bộ dấu vết`, event xuất hiện trong timeline trường.
+`RECORD_VERSION_CONFLICT`
 
-### Test D – Cross-origin
+Frontend phải tải bản mới nhất thay vì âm thầm ghi đè.
 
-Apps Script Content Service trả nội dung qua URL chuyển hướng `script.googleusercontent.com`. Trước khi production phải kiểm tra browser thực tế của staff có gọi API và đọc được phản hồi sau redirect hay không.
+`delete_record` là soft delete: dữ liệu được lưu trữ bằng `deleted_at`, không xóa vật lý ngay.
 
-Nếu trình duyệt/domain chặn cross-origin:
+## 9. Session
 
-- không dùng `no-cors` cho email vì app sẽ không biết gửi thành công hay thất bại;
-- chuyển transport sang một proxy/backend cùng origin hoặc phục vụ frontend qua Apps Script HTML Service;
-- giữ nguyên UI và API contract hiện tại.
+- Login: email + password.
+- Session mặc định: 12 giờ.
+- Token thô chỉ lưu ở browser; backend chỉ lưu hash token.
+- Logout hoặc reset password sẽ thu hồi session.
+- Session hết hạn buộc đăng nhập lại.
 
-## 7. Quy tắc an toàn
+## 10. Email và tracked link
 
-- Không dùng tracking pixel để suy diễn chắc chắn rằng email đã đọc.
-- Ưu tiên tracked document link vì tín hiệu hành vi rõ hơn.
-- Không lưu dữ liệu cá nhân không cần thiết.
-- Không cho staff nhìn API key.
-- Không hard-code API key trong repo public.
-- Mọi email gửi thật phải tạo activity log.
-- Không hiển thị `Đã gửi` nếu backend trả lỗi.
-- Không xóa activity; nếu cần điều chỉnh thì dùng audit/correction event.
+Email thật chỉ chạy sau khi Web App deploy thành công.
 
-## 8. Việc tiếp theo
+Luồng:
 
-Sau khi 3 service trên chạy ổn định, chuyển dần core data khỏi `localStorage` theo thứ tự:
+`School OS -> Gmail -> Email Log -> Activity`
 
-1. Schools
-2. Contacts
-3. Tasks
-4. Opportunities
-5. Documents
-6. Renewals / Handover
+Tài liệu gửi qua tracked link:
 
-Frontend V3 không cần thiết kế lại; chỉ thay data adapter.
+`Email -> unique link -> mở tài liệu -> LINK_OPENED -> hot signal`
+
+Không dùng email-open pixel làm tín hiệu chính.
+
+## 11. Kiểm thử bắt buộc
+
+### A. Health
+
+Frontend đọc được `status=ok`.
+
+### B. Login
+
+- đúng mật khẩu đăng nhập thành công;
+- sai mật khẩu bị từ chối;
+- STAFF không mở được giao diện quản lý;
+- session hết hạn yêu cầu login lại.
+
+### C. Multi-user conflict
+
+1. Hai thiết bị mở cùng một record.
+2. Thiết bị A sửa và lưu.
+3. Thiết bị B sửa bản cũ.
+4. Backend phải trả `RECORD_VERSION_CONFLICT`.
+5. B tải lại record mới, không ghi đè dữ liệu của A.
+
+### D. Email nội bộ
+
+Gửi tới email nội bộ trước khi gửi khách hàng.
+
+Xác minh `SO_EMAIL_LOG` và `EMAIL_SENT`.
+
+### E. Tracked link
+
+Mở link nội bộ và xác minh:
+
+- redirect đúng tài liệu;
+- `open_count` tăng;
+- `first_open_at`, `last_open_at` có dữ liệu;
+- `LINK_OPENED` xuất hiện trong activity feed.
+
+### F. Cross-origin
+
+Test Web App từ đúng domain/browser staff sẽ dùng.
+
+Không dùng `no-cors` để che lỗi gửi email.
+
+## 12. Dữ liệu ban đầu
+
+Không tự động đẩy seed/demo data vào production.
+
+Dữ liệu production phải được làm sạch trước khi import:
+
+- trường thật;
+- contact thật;
+- owner đúng;
+- task còn hiệu lực;
+- opportunity còn hiệu lực;
+- renewal date nếu có.
+
+Dùng stable `school_id`, không dùng tên trường làm khóa.
+
+## 13. Pilot
+
+Nên pilot nội bộ trước khi mở toàn đội.
+
+Theo dõi:
+
+- thao tác có nhanh không;
+- staff có tiếp tục dùng Excel/Zalo song song để bù thiếu chức năng không;
+- next action có được cập nhật đầy đủ không;
+- conflict có phát sinh không;
+- email/tracked link có ổn định không;
+- KPI có tạo hành vi chạy số không.
+
+Chỉ sau pilot mới chốt automation và cách chấm hiệu suất cuối cùng.
