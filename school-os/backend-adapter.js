@@ -1,11 +1,14 @@
-/* Sunbot School OS frontend backend adapter v0.3 */
+/* Sunbot School OS frontend backend adapter v0.4 */
 (function(){
   const URL_KEY='sunbot-school-os-backend-url';
   const API_KEY='sunbot-school-os-api-key';
   const SESSION_KEY='sunbot-school-os-session';
   const USER_KEY='sunbot-school-os-user';
 
-  function config(){return{url:(localStorage.getItem(URL_KEY)||'').trim(),apiKey:(localStorage.getItem(API_KEY)||'').trim()};}
+  function config(){
+    const deployed=(window.SCHOOL_OS_CONFIG&&window.SCHOOL_OS_CONFIG.backendUrl)||'';
+    return{url:(localStorage.getItem(URL_KEY)||deployed||'').trim(),apiKey:(localStorage.getItem(API_KEY)||'').trim()};
+  }
   function sessionToken(){return(localStorage.getItem(SESSION_KEY)||'').trim();}
   function currentUser(){try{return JSON.parse(localStorage.getItem(USER_KEY)||'null')}catch(e){return null}}
   function isConfigured(){return /^https:\/\//i.test(config().url);}
@@ -13,15 +16,15 @@
 
   async function call(action,payload,opts){
     const c=config();
-    if(!isConfigured())throw new Error('Backend School OS chưa được cấu hình.');
+    if(!isConfigured())throw new Error('Hệ thống dữ liệu chưa được cấu hình.');
     const envelope=Object.assign({action},payload||{}), token=sessionToken();
     if(token)envelope.session_token=token;
     if(c.apiKey&&(opts&&opts.useApiKey))envelope.api_key=c.apiKey;
     const res=await fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(envelope),redirect:'follow'});
-    if(!res.ok)throw new Error('Backend phản hồi HTTP '+res.status);
+    if(!res.ok)throw new Error('Máy chủ phản hồi HTTP '+res.status);
     const data=await res.json();
     if(!data.success){
-      const m=String(data.error||'Backend trả về lỗi.');
+      const m=String(data.error||'Máy chủ trả về lỗi.');
       if(/SESSION_(EXPIRED|INVALID|REVOKED)|AUTH_REQUIRED|ACCOUNT_DISABLED/.test(m))clearSession();
       const err=new Error(m);err.code=m.split(':')[0];throw err;
     }
