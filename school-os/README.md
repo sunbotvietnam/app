@@ -1,29 +1,38 @@
-# Sunbot School OS V2
+# Sunbot School OS V3
 
-Bản hoàn thiện frontend cho luồng theo dõi và phát triển trường Sunbot.
+## Nguyên tắc UX
 
-## Mục tiêu UX
+Staff không nhìn thấy toàn bộ độ phức tạp của hệ thống. Giao diện dùng progressive disclosure theo vai trò và ngữ cảnh.
 
-Mở app là biết ngay: trường nào cần chú ý, ai phụ trách, bước tiếp theo là gì và hạn xử lý khi nào.
+### Chế độ nhân viên
 
-## Luồng nghiệp vụ lõi
+Chỉ có 4 màn hình chính:
 
-Trường -> Tương tác -> Bước tiếp theo -> Công việc / Khám phá -> Cơ hội -> Đề xuất -> Quyết định.
+1. Hôm nay
+2. Trường học
+3. Việc cần làm
+4. Cơ hội
 
-## Các phần đã hoạt động trong frontend
+Email, người liên hệ, tracking tài liệu, qualification và gia hạn nằm bên trong hồ sơ trường khi cần, không tạo thêm menu riêng.
 
-- Dashboard Hôm nay với KPI tính từ dữ liệu hiện tại.
-- Danh sách trường, tìm kiếm và bộ lọc.
-- Hồ sơ trường dạng workspace với các tab Tổng quan, Tương tác, Công việc, Cơ hội, Tài liệu.
-- Thêm trường mới.
-- Tạo và hoàn thành công việc.
-- Tạo cơ hội theo pipeline.
-- Ghi nhận tương tác và tự cập nhật bước tiếp theo, hạn xử lý, mức độ rủi ro.
-- Lưu trạng thái demo bằng localStorage.
-- Mobile navigation và responsive layout.
+### Chế độ quản lý
 
-## Chưa nối production backend
+Bổ sung:
 
-Bản này vẫn là frontend. Bước production tiếp theo là thay lớp localStorage bằng data adapter gọi Apps Script/Google Sheets theo schema V2, giữ nguyên UI và luồng nghiệp vụ.
+1. Hiệu suất bán hàng
+2. Dự báo & gia hạn
 
-Không nên đưa file nhị phân vào database; tài liệu nên lưu ở Drive và School OS chỉ giữ metadata, phiên bản, trạng thái và URL.
+## Các lớp nghiệp vụ đã mô phỏng trong V3
+
+- School Intelligence: loại trường, quy mô, STEAM hiện tại, cơ chế địa phương, nguồn cơ hội.
+- Stakeholder CRM: người liên hệ, vai trò quyết định, thái độ.
+- Engagement Hub: email template, tracked document, activity timeline, tín hiệu nóng.
+- Sales Execution: task, next action, risk.
+- Opportunity Qualification: Fit, Need, Authority, Funding, Timing, Regulation, Capacity.
+- Sales Performance: effort, discipline, quality, pipeline outcome.
+- Revenue Lifecycle: forecast, renewal, handoff checklist.
+- CEO Next Best Action: ưu tiên follow-up theo tín hiệu và rủi ro.
+
+## Production backend
+
+V3 vẫn dùng localStorage cho demo. Khi production, UI giữ nguyên và thay data layer bằng Apps Script API / Google Sheets. Email và tracked links cần backend thật để gửi mail, tạo token link và ghi open/click events.
