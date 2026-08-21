@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sunbot School OS V3</title>
+<title>Sunbot School OS</title>
 <style>body{font-family:system-ui;margin:40px;color:#1d2530}.err{max-width:720px;padding:18px;border:1px solid #e5e8ed;border-radius:14px;background:#fff}</style>
 </head>
 <body>
@@ -12,9 +12,9 @@
 (async function(){
   try{
     const r=await fetch('v3.html',{cache:'no-store'});
-    if(!r.ok)throw new Error('Không tải được V3: HTTP '+r.status);
+    if(!r.ok)throw new Error('Không tải được ứng dụng: HTTP '+r.status);
     let html=await r.text();
-    html=html.replace('</body>','<script src="backend-adapter.js"><\/script><script src="runtime-patch.js"><\/script></body>');
+    html=html.replace('</body>','<script src="backend-adapter.js"><\/script><script src="runtime-patch.js"><\/script><script src="multiuser-runtime.js"><\/script></body>');
     document.open();document.write(html);document.close();
   }catch(e){document.getElementById('loading').outerHTML='<div class="err"><b>Không mở được ứng dụng.</b><p>'+String(e.message||e)+'</p></div>';}
 })();
