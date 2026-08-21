@@ -1,25 +1,32 @@
 /*
- * Sunbot School OS - Sales Services v0.1
+ * Sunbot School OS - Sales Services v0.2
  * Google Apps Script backend for:
  * 1) Email sending
  * 2) Tracked document links
  * 3) Unified activity/event log
+ * 4) Normalized core-data sync (schools, contacts, tasks, opportunities)
  *
  * SAFETY: No email is sent until this script is deployed and called with a valid API key.
- * Recommended deployment: Web app, Execute as: Me, Access: Anyone with link (API key required).
  */
 
 const SCHOOL_OS = {
+  VERSION: '0.2',
   SHEETS: {
     ACTIVITIES: 'SO_ACTIVITIES',
     TRACKED_LINKS: 'SO_TRACKED_LINKS',
-    EMAIL_LOG: 'SO_EMAIL_LOG'
+    EMAIL_LOG: 'SO_EMAIL_LOG',
+    SCHOOLS: 'SO_SCHOOLS',
+    CONTACTS: 'SO_CONTACTS',
+    TASKS: 'SO_TASKS',
+    OPPORTUNITIES: 'SO_OPPORTUNITIES',
+    META: 'SO_META'
   },
   EVENT: {
     EMAIL_SENT: 'EMAIL_SENT',
     LINK_CREATED: 'LINK_CREATED',
     LINK_OPENED: 'LINK_OPENED',
-    MANUAL_ACTIVITY: 'MANUAL_ACTIVITY'
+    MANUAL_ACTIVITY: 'MANUAL_ACTIVITY',
+    CORE_STATE_SAVED: 'CORE_STATE_SAVED'
   }
 };
 
@@ -47,13 +54,30 @@ function schoolOsSetup() {
     'email_id','sent_at','school_id','school_name','contact_id','contact_name','to_email',
     'subject','template_key','document_ids','sent_by','status','message'
   ]);
+  ensureSheet_(ss, SCHOOL_OS.SHEETS.SCHOOLS, [
+    'school_id','school_name','region','school_type','status','owner','next_action','next_action_date',
+    'risk','source','children','steam_status','policy_status','renewal_date','updated_at'
+  ]);
+  ensureSheet_(ss, SCHOOL_OS.SHEETS.CONTACTS, [
+    'contact_id','school_id','name','role','decision_role','email','phone','sentiment','status','updated_at'
+  ]);
+  ensureSheet_(ss, SCHOOL_OS.SHEETS.TASKS, [
+    'task_id','title','school_id','school_name','owner','due','risk','done','updated_at'
+  ]);
+  ensureSheet_(ss, SCHOOL_OS.SHEETS.OPPORTUNITIES, [
+    'opportunity_id','school_id','school_name','stage','title','owner','value',
+    'fit','need','authority','funding','timing','regulation','capacity','updated_at'
+  ]);
+  ensureSheet_(ss, SCHOOL_OS.SHEETS.META, ['key','value','updated_at']);
 
   if (!props.getProperty('SCHOOL_OS_API_KEY')) {
     props.setProperty('SCHOOL_OS_API_KEY', Utilities.getUuid().replace(/-/g, ''));
   }
+  if (typeof ensureCoreMeta_ === 'function') ensureCoreMeta_();
 
   return {
     success: true,
+    version: SCHOOL_OS.VERSION,
     spreadsheetId: ss.getId(),
     spreadsheetUrl: ss.getUrl(),
     apiKey: props.getProperty('SCHOOL_OS_API_KEY'),
@@ -68,7 +92,7 @@ function doGet(e) {
     return jsonOutput_({
       success: true,
       service: 'Sunbot School OS Sales Services',
-      version: '0.1',
+      version: SCHOOL_OS.VERSION,
       status: 'ready'
     });
   } catch (err) {
@@ -96,8 +120,16 @@ function doPost(e) {
       case 'get_activity':
         result = getActivityApi_(body);
         break;
+      case 'get_core_state':
+        if (typeof getCoreStateApi_ !== 'function') throw new Error('Core data module chưa được cài.');
+        result = getCoreStateApi_(body);
+        break;
+      case 'save_core_state':
+        if (typeof saveCoreStateApi_ !== 'function') throw new Error('Core data module chưa được cài.');
+        result = saveCoreStateApi_(body);
+        break;
       case 'health':
-        result = {success:true,status:'ok',version:'0.1'};
+        result = {success:true,status:'ok',version:SCHOOL_OS.VERSION};
         break;
       default:
         throw new Error('Action không hợp lệ: ' + action);
