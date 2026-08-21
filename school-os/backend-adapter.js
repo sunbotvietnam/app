@@ -1,4 +1,4 @@
-/* Sunbot School OS frontend backend adapter v0.1 */
+/* Sunbot School OS frontend backend adapter v0.2 */
 (function(){
   const URL_KEY='sunbot-school-os-backend-url';
   const API_KEY='sunbot-school-os-api-key';
@@ -30,11 +30,13 @@
     return data;
   }
 
-  async function health(){return call('health',{});}
-  async function sendEmail(payload){return call('send_email',payload);}
-  async function createTrackedLink(payload){return call('create_tracked_link',payload);}
-  async function logActivity(payload){return call('log_activity',payload);}
-  async function getActivity(schoolId,limit){return call('get_activity',{school_id:schoolId,limit:limit||100});}
+  const health=()=>call('health',{});
+  const sendEmail=payload=>call('send_email',payload);
+  const createTrackedLink=payload=>call('create_tracked_link',payload);
+  const logActivity=payload=>call('log_activity',payload);
+  const getActivity=(schoolId,limit)=>call('get_activity',{school_id:schoolId,limit:limit||100});
+  const getCoreState=()=>call('get_core_state',{});
+  const saveCoreState=(state,baseVersion,actor)=>call('save_core_state',{state,base_version:baseVersion,actor:actor||''});
 
   function saveConfig(url,apiKey){
     if(url!=null)localStorage.setItem(URL_KEY,String(url).trim());
@@ -42,5 +44,8 @@
   }
   function clearConfig(){localStorage.removeItem(URL_KEY);localStorage.removeItem(API_KEY);}
 
-  window.SchoolOsBackend={config,isConfigured,health,sendEmail,createTrackedLink,logActivity,getActivity,saveConfig,clearConfig};
+  window.SchoolOsBackend={
+    config,isConfigured,health,sendEmail,createTrackedLink,logActivity,getActivity,
+    getCoreState,saveCoreState,saveConfig,clearConfig
+  };
 })();
