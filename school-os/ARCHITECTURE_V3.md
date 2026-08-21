@@ -15,7 +15,7 @@ Không biến mỗi năng lực hệ thống thành một menu.
 
 - Hiệu suất bán hàng
 - Dự báo & gia hạn
-- Cấu hình backend
+- Cấu hình triển khai
 
 ## 2. 8 lớp logic phía sau
 
@@ -43,46 +43,76 @@ School OS chịu trách nhiệm đến:
 - renewal;
 - handover checklist.
 
-School OS không quản lý chi tiết:
-
-- lớp học;
-- học sinh;
-- buổi học;
-- attendance;
-- assessment;
-- robot inventory vận hành.
-
-Các hệ vận hành liên kết bằng `school_id`.
+School OS không quản lý chi tiết lớp học, học sinh, buổi học, attendance, assessment hay robot inventory vận hành. Các hệ vận hành liên kết bằng `school_id`.
 
 ## 4. Runtime architecture
 
 ```text
 index.html
   -> v3-runtime.html
-      -> v3.html (UI ổn định)
+      -> v3.html
+      -> state-bridge.js
+      -> app-config.js
       -> backend-adapter.js
       -> runtime-patch.js
+      -> multiuser-runtime.js
           -> Apps Script Web App
+              -> Auth / session / role
+              -> Record-level APIs
               -> Gmail
               -> Google Sheets event store
               -> tracked-link redirect
 ```
 
-Ưu điểm:
+UI giữ ổn định; backend, auth và transport có thể thay đổi độc lập.
 
-- UI không phải sửa mỗi lần backend đổi;
-- có thể rollback backend integration;
-- demo mode vẫn dùng được;
-- production transport có thể đổi mà không đổi workflow staff.
+## 5. Multi-user model
 
-## 5. Event model tối thiểu
+Production không dùng whole-state last-write-wins.
 
-Các event quan trọng:
+Các mutation chuẩn:
+
+- `upsert_school`
+- `upsert_contact`
+- `upsert_task`
+- `upsert_opportunity`
+- `delete_record`
+
+Mỗi record có:
+
+- `record_version`
+- `updated_by`
+- `updated_at`
+- `deleted_at`
+
+Client gửi `expected_version`. Nếu backend đã có version mới hơn, trả `RECORD_VERSION_CONFLICT` và client reload dữ liệu mới.
+
+## 6. Authentication
+
+Role:
+
+- SUPER_ADMIN
+- ADMIN
+- LEADER
+- STAFF
+
+Staff login bằng email + password. Password được hash + salt. Session có hạn 12 giờ; backend chỉ lưu hash của session token.
+
+`app-config.js` chỉ chứa backend URL và cấu hình không bí mật. API key không đưa vào frontend production.
+
+## 7. Event model
+
+Các event lõi:
 
 - EMAIL_SENT
 - LINK_CREATED
 - LINK_OPENED
 - MANUAL_ACTIVITY
+- SCHOOL_UPSERTED
+- CONTACT_UPSERTED
+- TASK_UPSERTED
+- OPPORTUNITY_UPSERTED
+- RECORD_DELETED
 
 Sau này mở rộng:
 
@@ -97,11 +127,9 @@ Sau này mở rộng:
 - RENEWAL_DUE
 - HANDOVER_COMPLETED
 
-## 6. Nguyên tắc đánh giá sales
+## 8. Sales performance
 
-Không dùng một điểm tổng duy nhất.
-
-Luôn tách:
+Không dùng một điểm tổng duy nhất. Luôn tách:
 
 - Nỗ lực
 - Kỷ luật
@@ -110,9 +138,9 @@ Luôn tách:
 
 Không khuyến khích KPI tạo hành vi gọi/gửi email cho đủ số lượng.
 
-## 7. Nguyên tắc tracking
+## 9. Tracking
 
 - Không suy diễn email mở = khách hàng quan tâm.
 - Tracked document open là signal, không phải quyết định mua.
 - Repeated views + reply + meeting mới tạo engagement mạnh.
-- Mọi signal phải gắn school_id và nếu có thì contact_id/opportunity_id.
+- Mọi signal phải gắn `school_id` và nếu có thì `contact_id`/`opportunity_id`.
