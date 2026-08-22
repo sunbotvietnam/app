@@ -4,28 +4,43 @@
 
   // Chỉ đổi chữ người dùng nhìn thấy. Không đổi mã dữ liệu, API hay tên trường.
   const replacements = [
-    // Cụm dài: ưu tiên câu tự nhiên, ngắn, rõ hành động.
-    [/Theo dõi sau tiếp cận đã thực hiện;\s*/gi,''],
-    [/Follow-up sau khi gửi hồ sơ/gi,'Theo dõi sau khi gửi hồ sơ'],
-    [/Follow-up hồ sơ đã gửi/gi,'Theo dõi hồ sơ đã gửi'],
-    [/Follow-up account brief đã gửi/gi,'Theo dõi hồ sơ trường đã gửi'],
-    [/Follow-up account hiện hữu/gi,'Trao đổi với trường đang hợp tác'],
+    // Câu giao diện: viết lại ngắn, tự nhiên và hướng hành động.
+    [/Chỉ hiện những việc cần hành động, không bắt staff đọc dashboard phức tạp\./gi,'Chỉ hiện những việc cần xử lý hôm nay.'],
+    [/Staff chỉ cần làm, hoàn thành và cập nhật kết quả\./gi,'Chỉ cần thực hiện, hoàn thành và cập nhật kết quả.'],
+    [/Điểm chất lượng được tính tự động; sale không cần tự “ước lượng % chốt”\./gi,'Hệ thống tự tính mức độ cơ hội; nhân viên chỉ cần cập nhật đúng tình hình.'],
+    [/Tách nỗ lực, kỷ luật, chất lượng và kết quả để tránh KPI “gọi cho đủ số”\./gi,'Xem riêng nỗ lực, kỷ luật, chất lượng và kết quả; không đánh giá chỉ bằng số cuộc gọi.'],
+    [/Nhìn doanh thu tiềm năng, cơ hội cũ và các trường cần gia hạn trước khi quá muộn\./gi,'Xem giá trị dự kiến, cơ hội đang theo dõi và các trường sắp đến hạn gia hạn.'],
+    [/Tín hiệu nóng — nên follow-up trong 24 giờ/gi,'Tín hiệu quan tâm — cần xử lý trong 24 giờ'],
+    [/Tín hiệu nóng/gi,'Tín hiệu quan tâm'],
+    [/Dự báo pipeline/gi,'Giá trị dự kiến'],
+    [/Demo theo xác suất/gi,'Theo mức độ tiến triển'],
+    [/Cơ hội & qualification/gi,'Cơ hội & mức độ phù hợp'],
+    [/Checklist bàn giao khi Won/gi,'Bàn giao khi đã chốt'],
+    [/Gửi & ghi dấu vết/gi,'Gửi và lưu lịch sử'],
+    [/Không đính link theo dõi/gi,'Không gắn liên kết theo dõi'],
+    [/Form thêm người liên hệ sẽ nối backend/gi,'Chức năng thêm người liên hệ đang được kết nối với dữ liệu'],
     [/Cần tập trung follow-up đúng hạn\.?/gi,'Cần xử lý các việc đến hạn đúng thời gian.'],
-    [/tín hiệu nóng chưa được follow-up/gi,'tín hiệu quan tâm cao chưa được xử lý'],
+    [/tín hiệu nóng chưa được follow-up/gi,'tín hiệu quan tâm chưa được xử lý'],
     [/pipeline phải phản ánh thực tế/gi,'Danh sách cơ hội phải phản ánh đúng thực tế'],
     [/chất lượng pipeline/gi,'chất lượng cơ hội'],
     [/Giá trị cơ hội quy đổi/gi,'Giá trị dự kiến theo tiến độ'],
+    [/Pipeline quy đổi/gi,'Giá trị dự kiến theo tiến độ'],
     [/route-to-school/gi,'cách tiếp cận trường'],
     [/site minh chứng/gi,'điểm minh chứng'],
     [/account brief/gi,'hồ sơ tóm tắt của trường'],
     [/account review/gi,'rà soát trường đang hợp tác'],
     [/teacher-transfer/gi,'chuyển giao cho giáo viên'],
     [/decision maker/gi,'người quyết định'],
-    [/hot signal/gi,'tín hiệu quan tâm cao'],
+    [/hot signal/gi,'tín hiệu quan tâm'],
     [/tracked link/gi,'liên kết theo dõi'],
     [/cold outreach/gi,'tiếp cận chủ động'],
     [/win rate/gi,'tỷ lệ chốt'],
     [/weighted pipeline/gi,'giá trị dự kiến theo tiến độ'],
+    [/Follow-up sau khi gửi hồ sơ/gi,'Theo dõi sau khi gửi hồ sơ'],
+    [/Follow-up hồ sơ đã gửi/gi,'Theo dõi hồ sơ đã gửi'],
+    [/Follow-up account brief đã gửi/gi,'Theo dõi hồ sơ trường đã gửi'],
+    [/Follow-up account hiện hữu/gi,'Trao đổi với trường đang hợp tác'],
+    [/Theo dõi sau tiếp cận đã thực hiện;\s*/gi,''],
 
     // Vai trò và thao tác.
     [/\bSUPER_ADMIN\b/g,'Quản trị cao nhất'],
@@ -69,6 +84,7 @@
 
     // Từ chuyên môn không cần thiết với người dùng nội bộ.
     [/\bproposal\b/gi,'đề xuất'],
+    [/\bprofile\b/gi,'hồ sơ giới thiệu'],
     [/\bresearch\b/gi,'nghiên cứu'],
     [/\bvendor\b/gi,'đơn vị cung cấp'],
     [/\bcontacts\b/gi,'đầu mối liên hệ'],
@@ -97,14 +113,23 @@
     [/\bemail log\b/gi,'lịch sử gửi email'],
     [/\bhotline\b/gi,'đường dây nóng'],
     [/\bwebsite\b/gi,'trang web'],
-    [/\brefresh\b/gi,'cập nhật']
+    [/\brefresh\b/gi,'cập nhật'],
+    [/\bdashboard\b/gi,'bảng tổng hợp'],
+    [/\bKPI\b/g,'chỉ số'],
+    [/\bsale\b/gi,'nhân viên'],
+    [/\bagenda\b/gi,'nội dung họp'],
+    [/\bkickoff\b/gi,'bắt đầu triển khai'],
+    [/\bchecklist\b/gi,'danh sách kiểm tra'],
+    [/\bbackend\b/gi,'hệ thống dữ liệu'],
+    [/\bform\b/gi,'biểu mẫu'],
+    [/\bonline\b/gi,'trực tuyến'],
+    [/\blink\b/gi,'liên kết']
   ];
 
   function translateString(value){
     if(!value || typeof value!=='string') return value;
     let out=value;
     replacements.forEach(([pattern,replacement])=>{ out=out.replace(pattern,replacement); });
-    // Dọn lỗi lặp/ khoảng trắng sau thay thế.
     out=out.replace(/tín hiệu\s+tín hiệu/gi,'tín hiệu')
            .replace(/phù hợp\s+phù hợp/gi,'phù hợp')
            .replace(/\s+([,.;:])/g,'$1')
