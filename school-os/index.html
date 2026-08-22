@@ -13,7 +13,7 @@ body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;backgrou
 <script>
 (async function(){
   const base='https://raw.githubusercontent.com/sunbotvietnam/app/main/school-os/';
-  const files=['state-bridge.js','app-config.js','backend-adapter.js','multiuser-runtime.js','account-security-runtime.js','team-hierarchy-runtime.js','governance-runtime.js','record-editor-runtime.js','business-polish-runtime.js','ui-guide-runtime.js','language-vi-runtime.js','email-intelligence-runtime.js','deep-engagement-runtime.js'];
+  const files=['state-bridge.js','app-config.js','backend-adapter.js','multiuser-runtime.js','account-security-runtime.js','team-hierarchy-runtime.js','governance-runtime.js','governance-deploy-guard.js','record-editor-runtime.js','business-polish-runtime.js','ui-guide-runtime.js','language-vi-runtime.js','email-intelligence-runtime.js','deep-engagement-runtime.js'];
   try{
     const responses=await Promise.all([fetch(base+'v3.html?ts='+Date.now(),{cache:'no-store'}),...files.map(f=>fetch(base+f+'?ts='+Date.now(),{cache:'no-store'}))]);
     for(const r of responses) if(!r.ok) throw new Error('Không tải được '+r.url+' — HTTP '+r.status);
