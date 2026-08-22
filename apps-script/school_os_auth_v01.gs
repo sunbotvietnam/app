@@ -1,4 +1,4 @@
-/* Sunbot School OS - session authentication and role model v0.1 */
+/* Sunbot School OS - session authentication and role model v0.2 */
 
 const SCHOOL_OS_AUTH = {
   USERS: 'SO_USERS',
@@ -16,10 +16,7 @@ function ensureAuthSheets_(ss) {
   ]);
 }
 
-/**
- * Bootstrap/reset user from Apps Script editor only.
- * Never expose this as a public web action.
- */
+/** Bootstrap/reset user from Apps Script editor only. */
 function schoolOsCreateOrResetUser(email, name, role, region, password) {
   const cleanEmail = normalizeEmail_(email);
   const cleanRole = String(role || 'STAFF').toUpperCase();
@@ -86,6 +83,30 @@ function meApi_(body) {
   return {success:true,user:publicUser_(auth.user),expires_at:auth.expires_at};
 }
 
+function changePasswordApi_(body, auth) {
+  const oldPassword = String(body.current_password || body.currentPassword || '');
+  const newPassword = String(body.new_password || body.newPassword || '');
+  if (!oldPassword) throw new Error('Cần nhập mật khẩu hiện tại.');
+  if (newPassword.length < 8) throw new Error('Mật khẩu mới cần ít nhất 8 ký tự.');
+  if (oldPassword === newPassword) throw new Error('Mật khẩu mới phải khác mật khẩu hiện tại.');
+  const user = findUserById_(String(auth.user.user_id));
+  if (!user) throw new Error('Không tìm thấy tài khoản.');
+  const got = hashPassword_(oldPassword, String(user.password_salt || ''));
+  if (!constantTimeEq_(got, String(user.password_hash || ''))) throw new Error('Mật khẩu hiện tại không đúng.');
+  const sh = getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.USERS);
+  const data = sh.getDataRange().getValues(), idx = headerIndex_(data[0]);
+  const salt = Utilities.getUuid().replace(/-/g,''), hash = hashPassword_(newPassword, salt), now = new Date();
+  for (let r=1;r<data.length;r++) {
+    if (String(data[r][idx.user_id]) !== String(user.user_id)) continue;
+    sh.getRange(r+1,idx.password_hash+1).setValue(hash);
+    sh.getRange(r+1,idx.password_salt+1).setValue(salt);
+    sh.getRange(r+1,idx.updated_at+1).setValue(now);
+    revokeUserSessions_(String(user.user_id));
+    return {success:true,reauthenticate:true};
+  }
+  throw new Error('Không cập nhật được mật khẩu.');
+}
+
 function requireAuthorized_(body, allowedRoles) {
   const token = String(body.session_token || body.sessionToken || '');
   if (token) {
@@ -132,33 +153,12 @@ function canAccessSchool_(user, school) {
   return false;
 }
 
-function findUserByEmail_(email) {
-  const rows = sheetObjects_(SCHOOL_OS_AUTH.USERS);
-  return rows.find(x => normalizeEmail_(x.email) === normalizeEmail_(email)) || null;
-}
-function findUserById_(id) {
-  const rows = sheetObjects_(SCHOOL_OS_AUTH.USERS);
-  return rows.find(x => String(x.user_id) === String(id)) || null;
-}
-function publicUser_(u) {
-  return {user_id:String(u.user_id),email:String(u.email),name:String(u.name),role:String(u.role),region:String(u.region||'')};
-}
-function updateUserLastLogin_(userId, when) {
-  const sh = getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.USERS);
-  const data = sh.getDataRange().getValues();
-  const idx = headerIndex_(data[0]);
-  for (let r=1;r<data.length;r++) if (String(data[r][idx.user_id])===String(userId)) {
-    sh.getRange(r+1,idx.last_login_at+1).setValue(when); return;
-  }
-}
-function revokeSessionByToken_(token) {
-  const hash = hashToken_(token), sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS), data=sh.getDataRange().getValues(), idx=headerIndex_(data[0]);
-  for(let r=1;r<data.length;r++) if(constantTimeEq_(String(data[r][idx.token_hash]||''),hash)){sh.getRange(r+1,idx.revoked_at+1).setValue(new Date());return;}
-}
-function revokeUserSessions_(userId) {
-  const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);
-  for(let r=1;r<data.length;r++) if(String(data[r][idx.user_id])===String(userId)&&!data[r][idx.revoked_at]) sh.getRange(r+1,idx.revoked_at+1).setValue(new Date());
-}
+function findUserByEmail_(email) { const rows=sheetObjects_(SCHOOL_OS_AUTH.USERS); return rows.find(x=>normalizeEmail_(x.email)===normalizeEmail_(email))||null; }
+function findUserById_(id) { const rows=sheetObjects_(SCHOOL_OS_AUTH.USERS); return rows.find(x=>String(x.user_id)===String(id))||null; }
+function publicUser_(u) { return {user_id:String(u.user_id),email:String(u.email),name:String(u.name),role:String(u.role),region:String(u.region||'')}; }
+function updateUserLastLogin_(userId,when){const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.USERS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);for(let r=1;r<data.length;r++)if(String(data[r][idx.user_id])===String(userId)){sh.getRange(r+1,idx.last_login_at+1).setValue(when);return;}}
+function revokeSessionByToken_(token){const hash=hashToken_(token),sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);for(let r=1;r<data.length;r++)if(constantTimeEq_(String(data[r][idx.token_hash]||''),hash)){sh.getRange(r+1,idx.revoked_at+1).setValue(new Date());return;}}
+function revokeUserSessions_(userId){const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);for(let r=1;r<data.length;r++)if(String(data[r][idx.user_id])===String(userId)&&!data[r][idx.revoked_at])sh.getRange(r+1,idx.revoked_at+1).setValue(new Date());}
 function normalizeEmail_(v){return String(v||'').trim().toLowerCase();}
 function hashPassword_(password,salt){return digestHex_(String(salt)+'|'+String(password));}
 function hashToken_(token){return digestHex_('SESSION|'+String(token));}
