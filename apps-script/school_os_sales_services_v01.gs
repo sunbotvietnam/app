@@ -44,6 +44,10 @@ function doPost(e){
     if(action==='login')return jsonOutput_(loginApi_(body));
     if(action==='logout')return jsonOutput_(logoutApi_(body));
     if(action==='me')return jsonOutput_(meApi_(body));
+    if(action==='change_password'){
+      const auth=requireAuthorized_(body,['SUPER_ADMIN','ADMIN','LEADER','STAFF']);
+      return jsonOutput_(changePasswordApi_(body,auth));
+    }
 
     let auth;
     if(['save_core_state'].indexOf(action)>=0) auth=requireAuthorized_(body,['SUPER_ADMIN','ADMIN']);
