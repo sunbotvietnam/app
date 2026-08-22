@@ -2,9 +2,9 @@
 (function(){
 'use strict';
 const TEAMS={
- 'kinhdoanh.kiro@gmail.com':{label:'Nhóm Hoàng Nhung',leader:'Hoàng Nhung',staff:[['Nhân viên Nhung 1','nhung01@sunbot.vn'],['Nhân viên Nhung 2','nhung02@sunbot.vn'],['Nhân viên Nhung 3','nhung03@sunbot.vn']]},
- 'dunglt16@gmail.com':{label:'Nhóm Lê Thị Dung',leader:'Lê Thị Dung',staff:[['Nhân viên Dung 1','dung01@sunbot.vn'],['Nhân viên Dung 2','dung02@sunbot.vn'],['Nhân viên Dung 3','dung03@sunbot.vn']]},
- 'thu.hd.td@gmail.com':{label:'Nhóm Minh Thu',leader:'Minh Thu',staff:[['Nhân viên Thu 1','thu01@sunbot.vn'],['Nhân viên Thu 2','thu02@sunbot.vn'],['Nhân viên Thu 3','thu03@sunbot.vn']]}
+ 'kinhdoanh.kiro@gmail.com':{label:'Nhóm Hoàng Nhung',leader:'Hoàng Nhung',staff:[['Staff 26-1','staff261@sunbot.vn'],['Staff 26-2','staff262@sunbot.vn'],['Staff 26-3','staff263@sunbot.vn']]},
+ 'dunglt16@gmail.com':{label:'Nhóm Lê Thị Dung',leader:'Lê Thị Dung',staff:[['Staff 26-4','staff264@sunbot.vn'],['Staff 26-5','staff265@sunbot.vn'],['Staff 26-6','staff266@sunbot.vn']]},
+ 'thu.hd.td@gmail.com':{label:'Nhóm Minh Thu',leader:'Minh Thu',staff:[['Staff 26-7','staff267@sunbot.vn'],['Staff 26-8','staff268@sunbot.vn'],['Staff 26-9','staff269@sunbot.vn']]}
 };
 const ADMIN='tuongvan1906@gmail.com';
 function u(){return window.SchoolOsBackend?.currentUser?.()||null}
