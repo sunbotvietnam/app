@@ -20,7 +20,7 @@ body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;backgrou
     const texts=await Promise.all(responses.map(r=>r.text()));
     let html=texts[0];
     const urls=texts.slice(1).map(js=>URL.createObjectURL(new Blob([js],{type:'text/javascript'})));
-    const tags=urls.map(u=>'<script src="'+u+'"><\\/script>').join('');
+    const tags=urls.map(u=>'<scr'+'ipt src="'+u+'"></scr'+'ipt>').join('');
     html=html.replace('</body>',tags+'</body>');
     document.open();document.write(html);document.close();
   }catch(e){
