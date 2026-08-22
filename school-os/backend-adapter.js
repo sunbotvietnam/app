@@ -1,4 +1,4 @@
-/* Sunbot School OS frontend backend adapter v0.4 */
+/* Sunbot School OS frontend backend adapter v0.5 */
 (function(){
   const URL_KEY='sunbot-school-os-backend-url';
   const API_KEY='sunbot-school-os-api-key';
@@ -35,6 +35,7 @@
   async function login(email,password){const r=await call('login',{email,password});localStorage.setItem(SESSION_KEY,r.session_token);localStorage.setItem(USER_KEY,JSON.stringify(r.user||null));return r;}
   async function logout(){try{if(sessionToken())await call('logout',{});}finally{clearSession();}}
   async function me(){const r=await call('me',{});localStorage.setItem(USER_KEY,JSON.stringify(r.user||null));return r;}
+  async function changePassword(currentPassword,newPassword){return call('change_password',{current_password:currentPassword,new_password:newPassword});}
   const sendEmail=payload=>call('send_email',payload);
   const createTrackedLink=payload=>call('create_tracked_link',payload);
   const logActivity=payload=>call('log_activity',payload);
@@ -53,7 +54,7 @@
   function clearSession(){localStorage.removeItem(SESSION_KEY);localStorage.removeItem(USER_KEY);}
 
   window.SchoolOsBackend={
-    config,isConfigured,isAuthenticated,sessionToken,currentUser,health,login,logout,me,
+    config,isConfigured,isAuthenticated,sessionToken,currentUser,health,login,logout,me,changePassword,
     sendEmail,createTrackedLink,logActivity,getActivity,listCoreRecords,
     upsertSchool,upsertContact,upsertTask,upsertOpportunity,deleteRecord,
     getCoreState,saveCoreState,saveConfig,clearConfig,clearSession
