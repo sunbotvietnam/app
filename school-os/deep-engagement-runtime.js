@@ -37,17 +37,21 @@ async function createDeepDraft(){
   }catch(e){window.toast?.('Chưa tạo được email nháp: '+String(e?.message||e).replace(/^Error:\s*/,''));}
   finally{if(btn){btn.disabled=false;btn.textContent='Mở email nháp';}}
 }
-function summaries(s){return (s?._backendActivities||[]).filter(x=>x.event_type==='LINK_OPENED').map(x=>String(x.summary||'').toLowerCase());}
-function score(s){const a=summaries(s);let n=0,opens=a.filter(x=>x.includes('hồ sơ điện tử sunbot')).length;n+=Math.min(opens,3)*10;if(a.some(x=>x.includes('30 giây')))n+=15;if(a.some(x=>x.includes('50%')))n+=10;if(a.some(x=>x.includes('gần hết')))n+=15;if(a.some(x=>x.includes('chương trình')))n+=15;if(a.some(x=>x.includes('mô hình hợp tác')))n+=20;if(a.some(x=>x.includes('bấm nút')))n+=25;return Math.min(n,100);}
+function allActs(s){return s?._backendActivities||[];}
+function summaries(s){return allActs(s).filter(x=>x.event_type==='LINK_OPENED').map(x=>String(x.summary||'').toLowerCase());}
+function isLegacyOpen(a){const t=String(a.event_type||'').toLowerCase(),q=String(a.summary||'').toLowerCase();return t==='mở hồ sơ điện tử'||t==='eprofile_open'||q==='hồ sơ điện tử sunbot đã được mở.'||q.includes('đã mở hồ sơ điện tử');}
+function ageDays(ts){const d=new Date(ts);if(!ts||isNaN(d))return 9999;return Math.max(0,(Date.now()-d.getTime())/86400000);}
+function legacyScore(s){const opens=allActs(s).filter(isLegacyOpen);if(!opens.length)return 0;let n=0;opens.forEach(a=>{const d=ageDays(a.timestamp);n+=d<=7?12:d<=30?8:d<=90?4:2;});return Math.min(n,20);}
+function score(s){const a=summaries(s);let n=legacyScore(s),opens=a.filter(x=>x.includes('hồ sơ điện tử sunbot')).length;n+=Math.min(opens,3)*10;if(a.some(x=>x.includes('30 giây')))n+=15;if(a.some(x=>x.includes('50%')))n+=10;if(a.some(x=>x.includes('gần hết')))n+=15;if(a.some(x=>x.includes('chương trình')))n+=15;if(a.some(x=>x.includes('mô hình hợp tác')))n+=20;if(a.some(x=>x.includes('bấm nút')))n+=25;return Math.min(n,100);}
 function label(n){return n>=70?'Quan tâm cao':n>=40?'Quan tâm':n>=10?'Đã xem hồ sơ':'Chưa mở hồ sơ';}
 function normalizeDeepEvents(s){
   (s?.events||[]).forEach(e=>{const q=String(e.raw?.summary||e.detail||'').toLowerCase();if(!q.includes('hành vi:'))return;
     if(q.includes('30 giây'))e.title='Đã xem hồ sơ ít nhất 30 giây';else if(q.includes('50%'))e.title='Đã xem ít nhất nửa hồ sơ';else if(q.includes('gần hết'))e.title='Đã xem gần hết hồ sơ';else if(q.includes('chương trình'))e.title='Đã xem phần Chương trình';else if(q.includes('mô hình hợp tác'))e.title='Đã xem phần Mô hình hợp tác';else if(q.includes('bấm nút'))e.title='Đã bấm nút hoặc liên kết trong hồ sơ';e.detail='';e.hot=q.includes('bấm nút')||q.includes('mô hình hợp tác')||q.includes('chương trình');
   });
 }
-function inject(){const s=school(),body=$('dBody');if(!s||!body)return;const old=body.querySelector('#schoolInterestBox');if(old)old.remove();const n=score(s),box=document.createElement('div');box.id='schoolInterestBox';box.className='recommend';box.style.marginBottom='12px';const opens=summaries(s).filter(x=>x.includes('hồ sơ điện tử sunbot')).length;box.innerHTML='<b>Mức quan tâm qua hồ sơ điện tử</b><p><strong>'+esc(label(n))+(n?' · '+n+'/100':'')+'</strong>'+(opens?' · mở hồ sơ '+opens+' lần':'')+'</p>';body.prepend(box);}
+function inject(){const s=school(),body=$('dBody');if(!s||!body)return;const old=body.querySelector('#schoolInterestBox');if(old)old.remove();const n=score(s),box=document.createElement('div');box.id='schoolInterestBox';box.className='recommend';box.style.marginBottom='12px';const newOpens=summaries(s).filter(x=>x.includes('hồ sơ điện tử sunbot')).length,oldOpens=allActs(s).filter(isLegacyOpen).length;const parts=[];if(oldOpens)parts.push('lịch sử cũ '+oldOpens+' lần');if(newOpens)parts.push('mở mới '+newOpens+' lần');box.innerHTML='<b>Mức quan tâm qua hồ sơ điện tử</b><p><strong>'+esc(label(n))+(n?' · '+n+'/100':'')+'</strong>'+(parts.length?' · '+esc(parts.join(' · ')):'')+'</p>';body.prepend(box);}
 function patchHotSignals(){
-  window.hotSignals=function(){const out=[];(window.state?.schools||[]).forEach(s=>{normalizeDeepEvents(s);const ev=(s.events||[]).filter(e=>e.hot);if(!ev.length)return;const rank=e=>{const q=String(e.raw?.summary||e.detail||'').toLowerCase();return q.includes('bấm nút')?5:q.includes('mô hình hợp tác')?4:q.includes('chương trình')?3:q.includes('hồ sơ điện tử sunbot')?2:1;};ev.sort((a,b)=>rank(b)-rank(a));out.push({school:s,event:ev[0]});});return out;};
+  window.hotSignals=function(){const out=[];(window.state?.schools||[]).forEach(s=>{normalizeDeepEvents(s);const ev=(s.events||[]).filter(e=>{if(!e.hot)return false;const ts=e.raw?.timestamp||'';return ageDays(ts)<=3;});if(!ev.length)return;const rank=e=>{const q=String(e.raw?.summary||e.detail||'').toLowerCase();return q.includes('bấm nút')?5:q.includes('mô hình hợp tác')?4:q.includes('chương trình')?3:q.includes('hồ sơ điện tử sunbot')?2:1;};ev.sort((a,b)=>rank(b)-rank(a));out.push({school:s,event:ev[0]});});return out;};
 }
 function patch(){
   const form=$('emailForm'),btn=form?.querySelector('.modalactions .primary');if(btn){btn.onclick=createDeepDraft;btn.textContent='Mở email nháp';}
@@ -56,5 +60,5 @@ function patch(){
   const info=$('emailTrackingInfo');if(info)info.textContent='Hệ thống gắn hồ sơ riêng và ghi nhận: mở hồ sơ, thời gian xem, mức cuộn, phần nội dung quan tâm và nút được bấm.';
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',patch);else patch();
-window.SchoolOsDeepEngagement={createDeepDraft,score};
+window.SchoolOsDeepEngagement={createDeepDraft,score,legacyScore};
 })();
