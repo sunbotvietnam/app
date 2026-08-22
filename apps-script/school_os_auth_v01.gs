@@ -17,12 +17,14 @@ function ensureAuthSheets_(ss) {
 }
 
 /** Bootstrap/reset user from Apps Script editor only. */
-function schoolOsCreateOrResetUser(email, name, role, region, password) {
+function schoolOsCreateOrResetUser(email, name, role, region, password, stableUserId) {
   const cleanEmail = normalizeEmail_(email);
   const cleanRole = String(role || 'STAFF').toUpperCase();
+  const cleanUserId = String(stableUserId || '').trim();
+  const isLegacyPin = !!cleanUserId && /^\d{6}$/.test(String(password || ''));
   if (!cleanEmail) throw new Error('Email không hợp lệ.');
   if (SCHOOL_OS_AUTH.ROLES.indexOf(cleanRole) < 0) throw new Error('Role không hợp lệ.');
-  if (String(password || '').length < 8) throw new Error('Mật khẩu cần ít nhất 8 ký tự.');
+  if (String(password || '').length < 8 && !isLegacyPin) throw new Error('Mật khẩu cần ít nhất 8 ký tự.');
   const ss = getDataSpreadsheet_();
   ensureAuthSheets_(ss);
   const sh = ss.getSheetByName(SCHOOL_OS_AUTH.USERS);
@@ -32,9 +34,18 @@ function schoolOsCreateOrResetUser(email, name, role, region, password) {
   const salt = Utilities.getUuid().replace(/-/g,'');
   const hash = hashPassword_(password, salt);
   const now = new Date();
+  if (cleanUserId) {
+    for (let r = 1; r < data.length; r++) {
+      if (String(data[r][idx.user_id]) === cleanUserId && normalizeEmail_(data[r][idx.email]) !== cleanEmail) {
+        throw new Error('User ID đã thuộc tài khoản khác: ' + cleanUserId);
+      }
+    }
+  }
   for (let r = 1; r < data.length; r++) {
     if (normalizeEmail_(data[r][idx.email]) !== cleanEmail) continue;
     const row = data[r].slice();
+    const previousUserId = String(row[idx.user_id]);
+    if (cleanUserId) row[idx.user_id] = cleanUserId;
     row[idx.name] = name || row[idx.name] || cleanEmail;
     row[idx.role] = cleanRole;
     row[idx.region] = region || '';
@@ -43,10 +54,11 @@ function schoolOsCreateOrResetUser(email, name, role, region, password) {
     row[idx.status] = 'ACTIVE';
     row[idx.updated_at] = now;
     sh.getRange(r+1,1,1,row.length).setValues([row]);
+    if (previousUserId !== String(row[idx.user_id])) revokeUserSessions_(previousUserId);
     revokeUserSessions_(String(row[idx.user_id]));
     return {success:true,user_id:String(row[idx.user_id]),email:cleanEmail,role:cleanRole,reset:true};
   }
-  const userId = 'USR_' + Utilities.getUuid().replace(/-/g,'');
+  const userId = cleanUserId || ('USR_' + Utilities.getUuid().replace(/-/g,''));
   sh.appendRow([userId,cleanEmail,name||cleanEmail,cleanRole,region||'',hash,salt,'ACTIVE','',now]);
   return {success:true,user_id:userId,email:cleanEmail,role:cleanRole,reset:false};
 }
