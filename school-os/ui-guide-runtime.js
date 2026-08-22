@@ -5,35 +5,35 @@
   let originals={};
 
   const TAB_HELP={
-    overview:'Tóm tắt tình trạng trường và việc cần làm tiếp theo. Trường đang theo dõi nên luôn có bước tiếp theo và hạn xử lý.',
-    people:'Xác định đúng người quyết định, người ảnh hưởng và đầu mối tài chính; đây không chỉ là danh bạ liên hệ.',
-    engagement:'Ghi điều đã xảy ra, kết quả chính và bước tiếp theo sau mỗi cuộc gọi, họp, email hoặc trao đổi.',
-    tasks:'Việc cụ thể cần có người phụ trách và hạn hoàn thành. Không dùng Công việc để lưu ghi chú.',
-    opps:'Chỉ tạo Cơ hội khi đã có tín hiệu kinh doanh thật. Cập nhật chất lượng dựa trên bằng chứng, không ước lượng cảm tính.',
-    renewal:'Theo dõi khả năng tiếp tục, mở rộng và các thông tin phải bàn giao khi cơ hội đã chốt.'
+    overview:'Xem tình hình hiện tại và việc cần làm tiếp theo. Trường đang theo dõi nên luôn có bước tiếp theo và hạn xử lý.',
+    people:'Ghi đúng người quyết định, người ảnh hưởng và đầu mối tài chính. Không dùng phần này như một danh bạ đơn thuần.',
+    engagement:'Sau mỗi cuộc gọi, họp hoặc email, ghi kết quả chính và việc cần làm tiếp theo.',
+    tasks:'Mỗi việc cần có nội dung rõ, người phụ trách và hạn hoàn thành. Không dùng phần này để lưu ghi chú.',
+    opps:'Chỉ tạo Cơ hội khi trường có tín hiệu kinh doanh thật. Cập nhật theo thông tin thực tế, không ước lượng cảm tính.',
+    renewal:'Theo dõi khả năng tiếp tục, mở rộng và những nội dung cần bàn giao khi đã chốt.'
   };
 
   const STAFF_GUIDE=`
-    <div class="guide-intro"><b>Mục tiêu</b><p>Mỗi ngày chỉ cần biết trường nào cần xử lý, việc gì phải làm và bước tiếp theo là gì.</p></div>
+    <div class="guide-intro"><b>Mục tiêu</b><p>Mỗi ngày biết rõ trường nào cần xử lý, việc gì phải làm và hạn nào cần chú ý.</p></div>
     <div class="guide-steps">
-      <div><span>1</span><b>Hôm nay</b><p>Mở đầu ngày để xử lý việc đến hạn, trường rủi ro và tín hiệu mới.</p></div>
-      <div><span>2</span><b>Trường học</b><p>Mở hồ sơ trường, kiểm tra trạng thái, đầu mối, bước tiếp theo và hạn xử lý.</p></div>
-      <div><span>3</span><b>Giao tiếp</b><p>Sau cuộc gọi/họp/email, ghi kết quả và việc tiếp theo. Không chỉ ghi “đã gọi”.</p></div>
-      <div><span>4</span><b>Công việc</b><p>Tạo khi có hành động cụ thể cần thực hiện; phải có người phụ trách và hạn.</p></div>
+      <div><span>1</span><b>Hôm nay</b><p>Xử lý việc đến hạn, trường cần chú ý và phản hồi mới.</p></div>
+      <div><span>2</span><b>Trường học</b><p>Xem tình hình, đầu mối, bước tiếp theo và hạn xử lý của từng trường.</p></div>
+      <div><span>3</span><b>Giao tiếp</b><p>Sau cuộc gọi, họp hoặc email, ghi kết quả và việc tiếp theo. Không chỉ ghi “đã gọi”.</p></div>
+      <div><span>4</span><b>Công việc</b><p>Tạo việc khi có hành động cụ thể; luôn ghi người phụ trách và hạn.</p></div>
       <div><span>5</span><b>Cơ hội</b><p>Chỉ tạo khi trường có tín hiệu kinh doanh thật; cập nhật giai đoạn khi tình hình thay đổi.</p></div>
     </div>
-    <div class="guide-rule"><b>Cuối ngày:</b> không để việc quá hạn chưa xử lý và không để trường đang theo dõi mà thiếu bước tiếp theo.</div>`;
+    <div class="guide-rule"><b>Cuối ngày:</b> xử lý việc quá hạn và bảo đảm mọi trường đang theo dõi đều có bước tiếp theo.</div>`;
 
   const MANAGER_GUIDE=`
-    <div class="guide-intro"><b>Mục tiêu</b><p>Quản lý bằng ngoại lệ và chất lượng pipeline, không bằng số cuộc gọi đơn thuần.</p></div>
+    <div class="guide-intro"><b>Mục tiêu</b><p>Biết chỗ nào cần can thiệp, ai đang vướng và cơ hội nào cần ưu tiên.</p></div>
     <div class="guide-steps">
-      <div><span>1</span><b>Hôm nay</b><p>Ưu tiên trường rủi ro, việc quá hạn, cơ hội lâu không hoạt động và tín hiệu nóng chưa được follow-up.</p></div>
-      <div><span>2</span><b>Hiệu suất bán hàng</b><p>Đọc theo 4 chiều: nỗ lực, kỷ luật, chất lượng và kết quả; không dùng một điểm tổng duy nhất.</p></div>
-      <div><span>3</span><b>Cơ hội</b><p>Rà đúng người quyết định, nhu cầu, nguồn tiền, thời điểm, chính sách và năng lực triển khai.</p></div>
-      <div><span>4</span><b>Dự báo & gia hạn</b><p>Xem doanh thu quy đổi, thời điểm dự kiến và trường cần gia hạn trước 60–90 ngày.</p></div>
-      <div><span>5</span><b>Coaching</b><p>Khi một cơ hội đứng yên, hỏi “đang vướng ở đâu và bước tiếp theo là gì?” thay vì chỉ hỏi “sao chưa chốt?”.</p></div>
+      <div><span>1</span><b>Hôm nay</b><p>Xem trường rủi ro, việc quá hạn, cơ hội đứng yên và phản hồi quan trọng chưa xử lý.</p></div>
+      <div><span>2</span><b>Hiệu suất bán hàng</b><p>Xem nỗ lực, kỷ luật hoàn thành, chất lượng cơ hội và kết quả. Không đánh giá chỉ bằng số cuộc gọi.</p></div>
+      <div><span>3</span><b>Cơ hội</b><p>Kiểm tra nhu cầu, người quyết định, nguồn tiền, thời điểm, chính sách và khả năng triển khai.</p></div>
+      <div><span>4</span><b>Dự báo & gia hạn</b><p>Xem giá trị dự kiến, thời điểm có thể chốt và trường cần gia hạn trước 60–90 ngày.</p></div>
+      <div><span>5</span><b>Hướng dẫn nhân viên</b><p>Khi một cơ hội đứng yên, hỏi “đang vướng ở đâu và bước tiếp theo là gì?” thay vì chỉ hỏi “sao chưa chốt?”.</p></div>
     </div>
-    <div class="guide-rule"><b>Nguyên tắc:</b> pipeline phải phản ánh thực tế. Cơ hội không còn sống nên được cập nhật, không giữ lại để làm đẹp số liệu.</div>`;
+    <div class="guide-rule"><b>Nguyên tắc:</b> danh sách cơ hội phải phản ánh đúng thực tế. Cơ hội không còn khả năng tiếp tục cần được cập nhật, không giữ lại để làm đẹp số liệu.</div>`;
 
   function managerRole(){
     const u=window.SchoolOsBackend?.currentUser?.();
@@ -71,7 +71,7 @@
   }
   function closeGuide(){$('guideModal')?.classList.remove('open');}
   function showGuide(kind){
-    const mgr=kind==='manager';$('guideSubtitle').textContent=mgr?'Điều hành bằng ngoại lệ, chất lượng và bước tiếp theo.':'Thực hiện đúng việc, đúng trường, đúng thời điểm.';
+    const mgr=kind==='manager';$('guideSubtitle').textContent=mgr?'Tập trung vào chỗ cần can thiệp và bước tiếp theo.':'Đúng việc, đúng trường, đúng thời điểm.';
     $('guideContent').innerHTML=mgr?MANAGER_GUIDE:STAFF_GUIDE;
     $('guideSwitch')?.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.guide===kind));
   }
@@ -87,7 +87,7 @@
     document.title='Sunbot School OS';
     document.querySelectorAll('.brand small').forEach(x=>x.textContent='Phát triển trường');
     const forecast=$('forecast');if(forecast){
-      const small=forecast.querySelector('.sectionhead small');if(small&&/demo/i.test(small.textContent))small.textContent='Giá trị quy đổi theo giai đoạn';
+      const small=forecast.querySelector('.sectionhead small');if(small&&/demo/i.test(small.textContent))small.textContent='Giá trị dự kiến theo tiến độ';
     }
     const b=$('backendBtn'),u=window.SchoolOsBackend?.currentUser?.();
     if(b){
@@ -96,7 +96,7 @@
     }
     const body=$('dBody');if(body&&window.currentTab==='renewal'){
       body.querySelectorAll('.recommend p').forEach(p=>{
-        if(/school_id|Sales OS|không nhồi/i.test(p.textContent))p.textContent='Khi cơ hội đã chốt, cần bàn giao đủ: hợp đồng, mức học phí, số trẻ, chương trình, robot, giáo viên, lịch khởi động và các cam kết đặc biệt.';
+        if(/school_id|Sales OS|không nhồi/i.test(p.textContent))p.textContent='Khi đã chốt, cần bàn giao đủ: hợp đồng, mức học phí, số trẻ, chương trình, robot, giáo viên, lịch bắt đầu và các cam kết đặc biệt.';
       });
     }
   }
