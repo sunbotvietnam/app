@@ -12,6 +12,7 @@
 <link rel="preload" href="record-editor-runtime.js" as="script">
 <link rel="preload" href="business-polish-runtime.js" as="script">
 <link rel="preload" href="ui-guide-runtime.js" as="script">
+<link rel="preload" href="language-vi-runtime.js" as="script">
 <style>body{font-family:system-ui;margin:40px;color:#1d2530}.err{max-width:720px;padding:18px;border:1px solid #e5e8ed;border-radius:14px;background:#fff}</style>
 </head>
 <body>
@@ -22,7 +23,7 @@
     const r=await fetch('v3.html',{cache:'no-cache'});
     if(!r.ok)throw new Error('Không tải được ứng dụng: HTTP '+r.status);
     let html=await r.text();
-    html=html.replace('</body>','<script src="state-bridge.js"><\/script><script src="app-config.js"><\/script><script src="backend-adapter.js"><\/script><script src="multiuser-runtime.js"><\/script><script src="record-editor-runtime.js"><\/script><script src="business-polish-runtime.js"><\/script><script src="ui-guide-runtime.js"><\/script></body>');
+    html=html.replace('</body>','<script src="state-bridge.js"><\/script><script src="app-config.js"><\/script><script src="backend-adapter.js"><\/script><script src="multiuser-runtime.js"><\/script><script src="record-editor-runtime.js"><\/script><script src="business-polish-runtime.js"><\/script><script src="ui-guide-runtime.js"><\/script><script src="language-vi-runtime.js"><\/script></body>');
     document.open();document.write(html);document.close();
   }catch(e){document.getElementById('loading').outerHTML='<div class="err"><b>Không mở được ứng dụng.</b><p>'+String(e.message||e)+'</p></div>';}
 })();
