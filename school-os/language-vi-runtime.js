@@ -4,11 +4,26 @@
 
   // Chỉ đổi chữ người dùng nhìn thấy. Không đổi mã dữ liệu, API hay tên trường.
   const replacements = [
+    // Tên và nhãn cấp cao.
+    [/Sunbot School OS/gi,'Sunbot – Phát triển trường'],
+    [/Người liên hệ & vai trò quyết định/gi,'Người liên hệ'],
+    [/Dòng giao tiếp/gi,'Lịch sử trao đổi'],
+    [/Ghi nhận tương tác/gi,'Ghi kết quả trao đổi'],
+    [/Ghi nhận khác/gi,'Ghi trao đổi khác'],
+    [/Lưu tương tác/gi,'Lưu'],
+    [/\bGiao tiếp\b/g,'Trao đổi'],
+    [/Nguồn cơ hội/gi,'Nguồn thông tin'],
+    [/Chất lượng cơ hội tốt nhất/gi,'Mức độ khả thi cao nhất'],
+    [/Chất lượng cơ hội/gi,'Mức độ khả thi'],
+    [/Chất lượng (\d+)%/gi,'Mức độ phù hợp $1%'],
+    [/Nỗ lực ghi nhận/gi,'Hoạt động đã ghi nhận'],
+    [/Kỷ luật hoàn thành/gi,'Tỷ lệ hoàn thành'],
+
     // Câu giao diện: viết lại ngắn, tự nhiên và hướng hành động.
     [/Chỉ hiện những việc cần hành động, không bắt staff đọc dashboard phức tạp\./gi,'Chỉ hiện những việc cần xử lý hôm nay.'],
     [/Staff chỉ cần làm, hoàn thành và cập nhật kết quả\./gi,'Chỉ cần thực hiện, hoàn thành và cập nhật kết quả.'],
     [/Điểm chất lượng được tính tự động; sale không cần tự “ước lượng % chốt”\./gi,'Hệ thống tự tính mức độ cơ hội; nhân viên chỉ cần cập nhật đúng tình hình.'],
-    [/Tách nỗ lực, kỷ luật, chất lượng và kết quả để tránh KPI “gọi cho đủ số”\./gi,'Xem riêng nỗ lực, kỷ luật, chất lượng và kết quả; không đánh giá chỉ bằng số cuộc gọi.'],
+    [/Tách nỗ lực, kỷ luật, chất lượng và kết quả để tránh KPI “gọi cho đủ số”\./gi,'Xem riêng hoạt động, tỷ lệ hoàn thành, mức độ khả thi và kết quả; không đánh giá chỉ bằng số cuộc gọi.'],
     [/Nhìn doanh thu tiềm năng, cơ hội cũ và các trường cần gia hạn trước khi quá muộn\./gi,'Xem giá trị dự kiến, cơ hội đang theo dõi và các trường sắp đến hạn gia hạn.'],
     [/Tín hiệu nóng — nên follow-up trong 24 giờ/gi,'Tín hiệu quan tâm — cần xử lý trong 24 giờ'],
     [/Tín hiệu nóng/gi,'Tín hiệu quan tâm'],
@@ -22,7 +37,7 @@
     [/Cần tập trung follow-up đúng hạn\.?/gi,'Cần xử lý các việc đến hạn đúng thời gian.'],
     [/tín hiệu nóng chưa được follow-up/gi,'tín hiệu quan tâm chưa được xử lý'],
     [/pipeline phải phản ánh thực tế/gi,'Danh sách cơ hội phải phản ánh đúng thực tế'],
-    [/chất lượng pipeline/gi,'chất lượng cơ hội'],
+    [/chất lượng pipeline/gi,'mức độ khả thi của cơ hội'],
     [/Giá trị cơ hội quy đổi/gi,'Giá trị dự kiến theo tiến độ'],
     [/Pipeline quy đổi/gi,'Giá trị dự kiến theo tiến độ'],
     [/route-to-school/gi,'cách tiếp cận trường'],
