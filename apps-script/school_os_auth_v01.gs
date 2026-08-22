@@ -1,142 +1,62 @@
-/* Sunbot School OS - session authentication and hierarchical role model v0.3 */
+/* Sunbot School OS - authentication + ADMIN > LEADER > STAFF hierarchy v0.4 */
+const SCHOOL_OS_AUTH={USERS:'SO_USERS',SESSIONS:'SO_SESSIONS',SESSION_HOURS:12,ROLES:['ADMIN','LEADER','STAFF']};
 
-const SCHOOL_OS_AUTH = {
-  USERS: 'SO_USERS',
-  SESSIONS: 'SO_SESSIONS',
-  SESSION_HOURS: 12,
-  ROLES: ['SUPER_ADMIN','ADMIN','LEADER','STAFF']
-};
-
-function ensureAuthSheets_(ss) {
-  ensureSheet_(ss, SCHOOL_OS_AUTH.USERS, [
-    'user_id','email','name','role','region','password_hash','password_salt','status','last_login_at','updated_at','manager_id','team_id'
-  ]);
-  ensureSheet_(ss, SCHOOL_OS_AUTH.SESSIONS, [
-    'session_id','token_hash','user_id','email','role','region','created_at','expires_at','revoked_at','last_seen_at'
-  ]);
+function ensureAuthSheets_(ss){
+  ensureSheet_(ss,SCHOOL_OS_AUTH.USERS,['user_id','email','name','role','region','password_hash','password_salt','status','last_login_at','updated_at','manager_id','team_id','username']);
+  ensureColumns_(ss.getSheetByName(SCHOOL_OS_AUTH.USERS),['manager_id','team_id','username']);
+  ensureSheet_(ss,SCHOOL_OS_AUTH.SESSIONS,['session_id','token_hash','user_id','email','role','region','created_at','expires_at','revoked_at','last_seen_at']);
 }
-
-function schoolOsCreateOrResetUser(email, name, role, region, password, managerId, teamId) {
-  const cleanEmail = normalizeEmail_(email);
-  const cleanRole = String(role || 'STAFF').toUpperCase();
-  if (!cleanEmail) throw new Error('Email không hợp lệ.');
-  if (SCHOOL_OS_AUTH.ROLES.indexOf(cleanRole) < 0) throw new Error('Role không hợp lệ.');
-  if (String(password || '').length < 6) throw new Error('Mật khẩu cần ít nhất 6 ký tự.');
-  const ss = getDataSpreadsheet_();
-  ensureAuthSheets_(ss);
-  const sh = ss.getSheetByName(SCHOOL_OS_AUTH.USERS);
-  const data = sh.getDataRange().getValues();
-  const idx = headerIndex_(data[0]);
-  const salt = Utilities.getUuid().replace(/-/g,'');
-  const hash = hashPassword_(password, salt);
-  const now = new Date();
-  for (let r = 1; r < data.length; r++) {
-    if (normalizeEmail_(data[r][idx.email]) !== cleanEmail) continue;
-    const row = data[r].slice();
-    row[idx.name] = name || row[idx.name] || cleanEmail;
-    row[idx.role] = cleanRole;
-    row[idx.region] = region || '';
-    row[idx.password_hash] = hash;
-    row[idx.password_salt] = salt;
-    row[idx.status] = 'ACTIVE';
-    row[idx.updated_at] = now;
-    if (idx.manager_id != null) row[idx.manager_id] = managerId || '';
-    if (idx.team_id != null) row[idx.team_id] = teamId || '';
-    sh.getRange(r+1,1,1,row.length).setValues([row]);
-    revokeUserSessions_(String(row[idx.user_id]));
-    return {success:true,user_id:String(row[idx.user_id]),email:cleanEmail,role:cleanRole,reset:true};
-  }
-  const userId = 'USR_' + Utilities.getUuid().replace(/-/g,'');
-  sh.appendRow([userId,cleanEmail,name||cleanEmail,cleanRole,region||'',hash,salt,'ACTIVE','',now,managerId||'',teamId||'']);
-  return {success:true,user_id:userId,email:cleanEmail,role:cleanRole,reset:false};
-}
-
-function loginApi_(body) {
-  const email = normalizeEmail_(body.email), password = String(body.password || '');
-  if (!email || !password) throw new Error('Cần nhập email và mật khẩu.');
-  const user = findUserByEmail_(email);
-  if (!user || String(user.status).toUpperCase() !== 'ACTIVE') throw new Error('Tài khoản không tồn tại hoặc đã bị khóa.');
-  const got = hashPassword_(password, String(user.password_salt || ''));
-  if (!constantTimeEq_(got, String(user.password_hash || ''))) throw new Error('Email hoặc mật khẩu không đúng.');
-  const rawToken = Utilities.getUuid().replace(/-/g,'') + Utilities.getUuid().replace(/-/g,'');
-  const now = new Date(), expires = new Date(now.getTime() + SCHOOL_OS_AUTH.SESSION_HOURS * 3600 * 1000);
-  const sessionId = 'SES_' + Utilities.getUuid().replace(/-/g,'');
-  getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS).appendRow([
-    sessionId,hashToken_(rawToken),user.user_id,user.email,user.role,user.region,now,expires,'',now
-  ]);
-  updateUserLastLogin_(user.user_id, now);
-  return {success:true,session_token:rawToken,expires_at:expires.toISOString(),user:publicUser_(user)};
-}
-
-function logoutApi_(body) { const t=String(body.session_token||body.sessionToken||''); if(t) revokeSessionByToken_(t); return {success:true}; }
-function meApi_(body) { const a=requireSession_(body); return {success:true,user:publicUser_(a.user),expires_at:a.expires_at}; }
-
-function changePasswordApi_(body, auth) {
-  const oldPassword=String(body.current_password||body.currentPassword||''), newPassword=String(body.new_password||body.newPassword||'');
-  if(!oldPassword) throw new Error('Cần nhập mật khẩu hiện tại.');
-  if(newPassword.length<6) throw new Error('Mật khẩu mới cần ít nhất 6 ký tự.');
-  if(oldPassword===newPassword) throw new Error('Mật khẩu mới phải khác mật khẩu hiện tại.');
-  const user=findUserById_(String(auth.user.user_id)); if(!user) throw new Error('Không tìm thấy tài khoản.');
-  if(!constantTimeEq_(hashPassword_(oldPassword,String(user.password_salt||'')),String(user.password_hash||''))) throw new Error('Mật khẩu hiện tại không đúng.');
-  const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.USERS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);
-  const salt=Utilities.getUuid().replace(/-/g,''),hash=hashPassword_(newPassword,salt),now=new Date();
-  for(let r=1;r<data.length;r++) if(String(data[r][idx.user_id])===String(user.user_id)){
-    sh.getRange(r+1,idx.password_hash+1).setValue(hash); sh.getRange(r+1,idx.password_salt+1).setValue(salt); sh.getRange(r+1,idx.updated_at+1).setValue(now);
-    revokeUserSessions_(String(user.user_id)); return {success:true,reauthenticate:true};
-  }
-  throw new Error('Không cập nhật được mật khẩu.');
-}
-
-function requireAuthorized_(body, allowedRoles) {
-  const token=String(body.session_token||body.sessionToken||'');
-  if(token){const auth=requireSession_(body);if(allowedRoles&&allowedRoles.length&&allowedRoles.indexOf(String(auth.user.role))<0)throw new Error('Bạn không có quyền thực hiện thao tác này.');return auth;}
-  requireApiKey_(body.api_key||body.apiKey);
-  return {user:{user_id:'SYSTEM',email:'system',name:'System',role:'SUPER_ADMIN',region:'',manager_id:'',team_id:'ALL'},via_api_key:true};
-}
-
-function requireSession_(body) {
-  const token=String(body.session_token||body.sessionToken||''); if(!token) throw new Error('AUTH_REQUIRED');
-  const tokenHash=hashToken_(token),sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]),now=new Date();
-  for(let r=1;r<data.length;r++){
-    if(!constantTimeEq_(String(data[r][idx.token_hash]||''),tokenHash))continue;
-    if(data[r][idx.revoked_at])throw new Error('SESSION_REVOKED');
-    const expires=new Date(data[r][idx.expires_at]); if(!expires.getTime()||expires<=now)throw new Error('SESSION_EXPIRED');
-    const user=findUserById_(String(data[r][idx.user_id])); if(!user||String(user.status).toUpperCase()!=='ACTIVE')throw new Error('ACCOUNT_DISABLED');
-    sh.getRange(r+1,idx.last_seen_at+1).setValue(now); return {user:user,expires_at:expires.toISOString(),session_id:String(data[r][idx.session_id])};
-  }
-  throw new Error('SESSION_INVALID');
-}
-
-function activeTeamUsers_(leaderId){
-  return sheetObjects_(SCHOOL_OS_AUTH.USERS).filter(x=>String(x.manager_id||'')===String(leaderId)&&String(x.status||'').toUpperCase()==='ACTIVE');
-}
-function userMatchesOwner_(u,school){
-  const owner=String(school.owner||'').trim().toLowerCase(), ownerEmail=normalizeEmail_(school.owner_email||'');
-  if(ownerEmail&&ownerEmail===normalizeEmail_(u.email))return true;
-  return !!owner&&!!u.name&&owner===String(u.name).trim().toLowerCase();
-}
-function canAccessSchool_(user, school) {
-  const role=String(user.role||'').toUpperCase();
-  if(role==='SUPER_ADMIN'||role==='ADMIN') return true;
-  if(userMatchesOwner_(user,school)) return true;
-  if(role==='LEADER') return activeTeamUsers_(user.user_id).some(u=>userMatchesOwner_(u,school));
-  return false;
-}
-
-function listUsersApi_(body,auth){
-  const role=String(auth.user.role||'').toUpperCase();
-  let rows=sheetObjects_(SCHOOL_OS_AUTH.USERS).filter(x=>String(x.status||'').toUpperCase()!=='DELETED');
-  if(role==='LEADER') rows=rows.filter(x=>String(x.user_id)===String(auth.user.user_id)||String(x.manager_id||'')===String(auth.user.user_id));
-  else if(role!=='ADMIN'&&role!=='SUPER_ADMIN') rows=rows.filter(x=>String(x.user_id)===String(auth.user.user_id));
-  return {success:true,users:rows.map(publicUser_)};
-}
-
+function normalizeUsername_(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,'');}
 function findUserByEmail_(email){return sheetObjects_(SCHOOL_OS_AUTH.USERS).find(x=>normalizeEmail_(x.email)===normalizeEmail_(email))||null;}
+function findUserByUsername_(username){const q=normalizeUsername_(username);return sheetObjects_(SCHOOL_OS_AUTH.USERS).find(x=>normalizeUsername_(x.username)===q)||null;}
+function findUserByLogin_(v){const q=String(v||'').trim();return q.indexOf('@')>=0?findUserByEmail_(q):findUserByUsername_(q);}
 function findUserById_(id){return sheetObjects_(SCHOOL_OS_AUTH.USERS).find(x=>String(x.user_id)===String(id))||null;}
-function publicUser_(u){return {user_id:String(u.user_id),email:String(u.email),name:String(u.name),role:String(u.role),region:String(u.region||''),manager_id:String(u.manager_id||''),team_id:String(u.team_id||''),status:String(u.status||'')};}
-function updateUserLastLogin_(userId,when){const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.USERS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);for(let r=1;r<data.length;r++)if(String(data[r][idx.user_id])===String(userId)){sh.getRange(r+1,idx.last_login_at+1).setValue(when);return;}}
+function nextUserId_(){const nums=sheetObjects_(SCHOOL_OS_AUTH.USERS).map(x=>String(x.user_id||'').match(/^USR(\d+)$/)).filter(Boolean).map(m=>Number(m[1]));return'USR'+String((nums.length?Math.max.apply(null,nums):0)+1).padStart(4,'0');}
+function uniqueUsername_(username,ignoreId){const q=normalizeUsername_(username);if(!q)throw new Error('Tên đăng nhập không hợp lệ.');const hit=sheetObjects_(SCHOOL_OS_AUTH.USERS).find(x=>normalizeUsername_(x.username)===q&&String(x.user_id)!==String(ignoreId||''));if(hit)throw new Error('Tên đăng nhập đã tồn tại.');return q;}
+
+function schoolOsCreateOrResetUser(email,name,role,region,password,managerId,teamId,username){
+  const cleanEmail=normalizeEmail_(email),cleanRole=String(role||'STAFF').toUpperCase();
+  if(!cleanEmail)throw new Error('Email không hợp lệ.');if(SCHOOL_OS_AUTH.ROLES.indexOf(cleanRole)<0)throw new Error('Role không hợp lệ.');if(String(password||'').length<6)throw new Error('Mật khẩu cần ít nhất 6 ký tự.');
+  const ss=getDataSpreadsheet_();ensureAuthSheets_(ss);const sh=ss.getSheetByName(SCHOOL_OS_AUTH.USERS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);
+  let existing=findUserByEmail_(cleanEmail),uid=existing?String(existing.user_id):nextUserId_(),uname=uniqueUsername_(username||cleanEmail.split('@')[0],uid);
+  const salt=Utilities.getUuid().replace(/-/g,''),hash=hashPassword_(password,salt),now=new Date();
+  if(existing){for(let r=1;r<data.length;r++)if(String(data[r][idx.user_id])===uid){setObjectFields_(sh,r+1,{email:cleanEmail,name:name||existing.name||cleanEmail,role:cleanRole,region:region||'',password_hash:hash,password_salt:salt,status:'ACTIVE',updated_at:now,manager_id:managerId||'',team_id:teamId||'',username:uname});revokeUserSessions_(uid);return{success:true,user_id:uid,username:uname,reset:true};}}
+  sh.appendRow(data[0].map(h=>({user_id:uid,email:cleanEmail,name:name||cleanEmail,role:cleanRole,region:region||'',password_hash:hash,password_salt:salt,status:'ACTIVE',last_login_at:'',updated_at:now,manager_id:managerId||'',team_id:teamId||'',username:uname})[h]||''));
+  return{success:true,user_id:uid,username:uname,reset:false};
+}
+
+function loginApi_(body){
+  const identifier=String(body.login||body.username||body.email||'').trim(),password=String(body.password||'');if(!identifier||!password)throw new Error('Cần nhập tài khoản và mật khẩu.');
+  const user=findUserByLogin_(identifier);if(!user||String(user.status).toUpperCase()!=='ACTIVE')throw new Error('Tài khoản không tồn tại hoặc đã bị khóa.');
+  if(!constantTimeEq_(hashPassword_(password,String(user.password_salt||'')),String(user.password_hash||'')))throw new Error('Tài khoản hoặc mật khẩu không đúng.');
+  const rawToken=Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,''),now=new Date(),expires=new Date(now.getTime()+SCHOOL_OS_AUTH.SESSION_HOURS*3600000),sessionId='SES_'+Utilities.getUuid().replace(/-/g,'');
+  getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS).appendRow([sessionId,hashToken_(rawToken),user.user_id,user.email,user.role,user.region,now,expires,'',now]);updateUserLastLogin_(user.user_id,now);
+  return{success:true,session_token:rawToken,expires_at:expires.toISOString(),user:publicUser_(user)};
+}
+function logoutApi_(body){const t=String(body.session_token||body.sessionToken||'');if(t)revokeSessionByToken_(t);return{success:true};}
+function meApi_(body){const a=requireSession_(body);return{success:true,user:publicUser_(a.user),expires_at:a.expires_at};}
+function changePasswordApi_(body,auth){const oldP=String(body.current_password||body.currentPassword||''),newP=String(body.new_password||body.newPassword||'');if(!oldP)throw new Error('Cần nhập mật khẩu hiện tại.');if(newP.length<6)throw new Error('Mật khẩu mới cần ít nhất 6 ký tự.');if(oldP===newP)throw new Error('Mật khẩu mới phải khác mật khẩu hiện tại.');const user=findUserById_(auth.user.user_id);if(!user)throw new Error('Không tìm thấy tài khoản.');if(!constantTimeEq_(hashPassword_(oldP,String(user.password_salt||'')),String(user.password_hash||'')))throw new Error('Mật khẩu hiện tại không đúng.');const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.USERS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]),salt=Utilities.getUuid().replace(/-/g,''),hash=hashPassword_(newP,salt);for(let r=1;r<data.length;r++)if(String(data[r][idx.user_id])===String(user.user_id)){setObjectFields_(sh,r+1,{password_hash:hash,password_salt:salt,updated_at:new Date()});revokeUserSessions_(user.user_id);return{success:true,reauthenticate:true};}throw new Error('Không cập nhật được mật khẩu.');}
+
+function requireAuthorized_(body,allowedRoles){const token=String(body.session_token||body.sessionToken||'');if(token){const auth=requireSession_(body);if(allowedRoles&&allowedRoles.length&&allowedRoles.indexOf(String(auth.user.role))<0)throw new Error('Bạn không có quyền thực hiện thao tác này.');return auth;}requireApiKey_(body.api_key||body.apiKey);return{user:{user_id:'SYSTEM',email:'system',name:'System',role:'ADMIN',region:'',manager_id:'',team_id:'ALL',username:'system'},via_api_key:true};}
+function requireSession_(body){const token=String(body.session_token||body.sessionToken||'');if(!token)throw new Error('AUTH_REQUIRED');const tokenHash=hashToken_(token),sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]),now=new Date();for(let r=1;r<data.length;r++){if(!constantTimeEq_(String(data[r][idx.token_hash]||''),tokenHash))continue;if(data[r][idx.revoked_at])throw new Error('SESSION_REVOKED');const expires=new Date(data[r][idx.expires_at]);if(!expires.getTime()||expires<=now)throw new Error('SESSION_EXPIRED');const user=findUserById_(String(data[r][idx.user_id]));if(!user||String(user.status).toUpperCase()!=='ACTIVE')throw new Error('ACCOUNT_DISABLED');sh.getRange(r+1,idx.last_seen_at+1).setValue(now);return{user:user,expires_at:expires.toISOString(),session_id:String(data[r][idx.session_id])};}throw new Error('SESSION_INVALID');}
+
+function activeTeamUsers_(leaderId){return sheetObjects_(SCHOOL_OS_AUTH.USERS).filter(x=>String(x.manager_id||'')===String(leaderId)&&String(x.status||'').toUpperCase()==='ACTIVE');}
+function teamUserIds_(leader){return[String(leader.user_id)].concat(activeTeamUsers_(leader.user_id).map(x=>String(x.user_id)));}
+function userMatchesOwner_(u,school){if(String(school.owner_user_id||'')&&String(school.owner_user_id)===String(u.user_id))return true;const owner=String(school.owner||'').trim().toLowerCase();return!!owner&&!!u.name&&owner===String(u.name).trim().toLowerCase();}
+function canAccessSchool_(user,school){const role=String(user.role||'').toUpperCase();if(role==='ADMIN')return true;if(userMatchesOwner_(user,school))return true;if(role==='LEADER')return teamUserIds_(user).indexOf(String(school.owner_user_id||''))>=0||String(school.team_id||'')===String(user.team_id||'');return false;}
+function canAssignUser_(actor,target){if(!target||String(target.status||'').toUpperCase()!=='ACTIVE')return false;const role=String(actor.role||'').toUpperCase();if(role==='ADMIN')return true;if(role==='LEADER')return String(target.user_id)===String(actor.user_id)||String(target.manager_id||'')===String(actor.user_id);return String(target.user_id)===String(actor.user_id);}
+function requireAssignableUser_(actor,userId){const t=findUserById_(userId);if(!canAssignUser_(actor,t))throw new Error('Bạn không có quyền giao cho người dùng này.');return t;}
+function defaultProposalLeader_(user){if(user.role==='LEADER')return user;if(user.role==='STAFF'&&user.manager_id)return findUserById_(user.manager_id);return null;}
+
+function listUsersApi_(body,auth){const role=String(auth.user.role||'').toUpperCase();let rows=sheetObjects_(SCHOOL_OS_AUTH.USERS).filter(x=>String(x.status||'').toUpperCase()!=='DELETED');if(role==='LEADER')rows=rows.filter(x=>String(x.user_id)===String(auth.user.user_id)||String(x.manager_id||'')===String(auth.user.user_id));else if(role!=='ADMIN')rows=rows.filter(x=>String(x.user_id)===String(auth.user.user_id));return{success:true,users:rows.map(publicUser_)};}
+function adminUpsertUserApi_(body,auth){if(String(auth.user.role)!=='ADMIN')throw new Error('Chỉ Admin được quản lý người dùng.');const d=body.user||body.record||{},id=String(d.user_id||''),existing=id?findUserById_(id):null,role=String(d.role||'STAFF').toUpperCase();if(SCHOOL_OS_AUTH.ROLES.indexOf(role)<0)throw new Error('Role không hợp lệ.');const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.USERS),uname=uniqueUsername_(d.username||(d.email||'').split('@')[0],id),now=new Date();if(existing){const rows=sheetObjects_(SCHOOL_OS_AUTH.USERS),row=rows.findIndex(x=>String(x.user_id)===id)+2;setObjectFields_(sh,row,{email:normalizeEmail_(d.email||existing.email),name:d.name||existing.name,role:role,region:d.region||'',status:d.status||existing.status||'ACTIVE',manager_id:role==='ADMIN'?'':(d.manager_id||''),team_id:role==='ADMIN'?'ALL':(d.team_id||''),username:uname,updated_at:now});revokeUserSessions_(id);return{success:true,user:publicUser_(findUserById_(id))};}const uid=nextUserId_();if(!d.password||String(d.password).length<6)throw new Error('Tài khoản mới cần mật khẩu ít nhất 6 ký tự.');schoolOsCreateOrResetUser(d.email,d.name,role,d.region,d.password,d.manager_id,d.team_id,uname);return{success:true,user:publicUser_(findUserById_(uid)||findUserByUsername_(uname))};}
+function adminResetPasswordApi_(body,auth){if(String(auth.user.role)!=='ADMIN')throw new Error('Chỉ Admin được đặt lại mật khẩu.');const user=findUserById_(String(body.user_id||'')),p=String(body.new_password||'');if(!user)throw new Error('Không tìm thấy người dùng.');if(p.length<6)throw new Error('Mật khẩu cần ít nhất 6 ký tự.');const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.USERS),rows=sheetObjects_(SCHOOL_OS_AUTH.USERS),row=rows.findIndex(x=>String(x.user_id)===String(user.user_id))+2,salt=Utilities.getUuid().replace(/-/g,'');setObjectFields_(sh,row,{password_hash:hashPassword_(p,salt),password_salt:salt,updated_at:new Date()});revokeUserSessions_(user.user_id);return{success:true};}
+function adminSetUserStatusApi_(body,auth){if(String(auth.user.role)!=='ADMIN')throw new Error('Chỉ Admin được khóa/mở tài khoản.');const user=findUserById_(String(body.user_id||''));if(!user)throw new Error('Không tìm thấy người dùng.');const status=String(body.status||'ACTIVE').toUpperCase();if(['ACTIVE','DISABLED'].indexOf(status)<0)throw new Error('Trạng thái không hợp lệ.');const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.USERS),rows=sheetObjects_(SCHOOL_OS_AUTH.USERS),row=rows.findIndex(x=>String(x.user_id)===String(user.user_id))+2;setObjectFields_(sh,row,{status:status,updated_at:new Date()});revokeUserSessions_(user.user_id);return{success:true};}
+
+function publicUser_(u){return{user_id:String(u.user_id),username:String(u.username||''),email:String(u.email),name:String(u.name),role:String(u.role),region:String(u.region||''),manager_id:String(u.manager_id||''),team_id:String(u.team_id||''),status:String(u.status||''),last_login_at:u.last_login_at||''};}
+function updateUserLastLogin_(id,when){const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.USERS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);for(let r=1;r<data.length;r++)if(String(data[r][idx.user_id])===String(id)){sh.getRange(r+1,idx.last_login_at+1).setValue(when);return;}}
 function revokeSessionByToken_(token){const hash=hashToken_(token),sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);for(let r=1;r<data.length;r++)if(constantTimeEq_(String(data[r][idx.token_hash]||''),hash)){sh.getRange(r+1,idx.revoked_at+1).setValue(new Date());return;}}
-function revokeUserSessions_(userId){const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);for(let r=1;r<data.length;r++)if(String(data[r][idx.user_id])===String(userId)&&!data[r][idx.revoked_at])sh.getRange(r+1,idx.revoked_at+1).setValue(new Date());}
+function revokeUserSessions_(id){const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS_AUTH.SESSIONS),data=sh.getDataRange().getValues(),idx=headerIndex_(data[0]);for(let r=1;r<data.length;r++)if(String(data[r][idx.user_id])===String(id)&&!data[r][idx.revoked_at])sh.getRange(r+1,idx.revoked_at+1).setValue(new Date());}
 function normalizeEmail_(v){return String(v||'').trim().toLowerCase();}
 function hashPassword_(password,salt){return digestHex_(String(salt)+'|'+String(password));}
 function hashToken_(token){return digestHex_('SESSION|'+String(token));}
