@@ -22,7 +22,7 @@ async function createDeepDraft(){
       ['ENG_MODEL','Hành vi: xem phần Mô hình hợp tác','model'],
       ['ENG_CTA','Hành vi: bấm nút hoặc liên kết trong hồ sơ','cta']
     ];
-    const rs=await Promise.all(labels.map(x=>makeBeacon(s,c,x[0],x[1])));
+    const rs=[];for(const x of labels)rs.push(await makeBeacon(s,c,x[0],x[1]));
     const qp=new URLSearchParams({target});labels.forEach((x,i)=>qp.set(x[2],rs[i].tracked_url));
     const wrapper=VIEWER+'?'+qp.toString();
     const main=await B().createTrackedLink({school_id:s.id,school_name:s.name,contact_id:c.id||'',contact_name:c.name||'',document_id:'EPROFILE',document_name:'Hồ sơ điện tử Sunbot',destination_url:wrapper});
@@ -37,29 +37,22 @@ async function createDeepDraft(){
   }catch(e){window.toast?.('Chưa tạo được email nháp: '+String(e?.message||e).replace(/^Error:\s*/,''));}
   finally{if(btn){btn.disabled=false;btn.textContent='Mở email nháp';}}
 }
-function score(s){
-  const a=s?._backendActivities||[], summaries=a.filter(x=>x.event_type==='LINK_OPENED').map(x=>String(x.summary||'').toLowerCase());
-  let n=0, opens=summaries.filter(x=>x.includes('hồ sơ điện tử sunbot')).length;n+=Math.min(opens,3)*10;
-  if(summaries.some(x=>x.includes('30 giây')))n+=15;
-  if(summaries.some(x=>x.includes('50%')))n+=10;
-  if(summaries.some(x=>x.includes('gần hết')))n+=15;
-  if(summaries.some(x=>x.includes('chương trình')))n+=15;
-  if(summaries.some(x=>x.includes('mô hình hợp tác')))n+=20;
-  if(summaries.some(x=>x.includes('bấm nút')))n+=25;
-  return Math.min(n,100);
-}
+function summaries(s){return (s?._backendActivities||[]).filter(x=>x.event_type==='LINK_OPENED').map(x=>String(x.summary||'').toLowerCase());}
+function score(s){const a=summaries(s);let n=0,opens=a.filter(x=>x.includes('hồ sơ điện tử sunbot')).length;n+=Math.min(opens,3)*10;if(a.some(x=>x.includes('30 giây')))n+=15;if(a.some(x=>x.includes('50%')))n+=10;if(a.some(x=>x.includes('gần hết')))n+=15;if(a.some(x=>x.includes('chương trình')))n+=15;if(a.some(x=>x.includes('mô hình hợp tác')))n+=20;if(a.some(x=>x.includes('bấm nút')))n+=25;return Math.min(n,100);}
 function label(n){return n>=70?'Quan tâm cao':n>=40?'Quan tâm':n>=10?'Đã xem hồ sơ':'Chưa mở hồ sơ';}
-function inject(){
-  const s=school(),body=$('dBody');if(!s||!body)return;const old=body.querySelector('#schoolInterestBox');if(old)old.remove();
-  const n=score(s), box=document.createElement('div');box.id='schoolInterestBox';box.className='recommend';box.style.marginBottom='12px';
-  const opens=(s._backendActivities||[]).filter(a=>a.event_type==='LINK_OPENED'&&String(a.summary||'').toLowerCase().includes('hồ sơ điện tử sunbot')).length;
-  box.innerHTML='<b>Mức quan tâm qua hồ sơ điện tử</b><p><strong>'+esc(label(n))+(n?' · '+n+'/100':'')+'</strong>'+(opens?' · mở hồ sơ '+opens+' lần':'')+'</p>';
-  body.prepend(box);
+function normalizeDeepEvents(s){
+  (s?.events||[]).forEach(e=>{const q=String(e.raw?.summary||e.detail||'').toLowerCase();if(!q.includes('hành vi:'))return;
+    if(q.includes('30 giây'))e.title='Đã xem hồ sơ ít nhất 30 giây';else if(q.includes('50%'))e.title='Đã xem ít nhất nửa hồ sơ';else if(q.includes('gần hết'))e.title='Đã xem gần hết hồ sơ';else if(q.includes('chương trình'))e.title='Đã xem phần Chương trình';else if(q.includes('mô hình hợp tác'))e.title='Đã xem phần Mô hình hợp tác';else if(q.includes('bấm nút'))e.title='Đã bấm nút hoặc liên kết trong hồ sơ';e.detail='';e.hot=q.includes('bấm nút')||q.includes('mô hình hợp tác')||q.includes('chương trình');
+  });
+}
+function inject(){const s=school(),body=$('dBody');if(!s||!body)return;const old=body.querySelector('#schoolInterestBox');if(old)old.remove();const n=score(s),box=document.createElement('div');box.id='schoolInterestBox';box.className='recommend';box.style.marginBottom='12px';const opens=summaries(s).filter(x=>x.includes('hồ sơ điện tử sunbot')).length;box.innerHTML='<b>Mức quan tâm qua hồ sơ điện tử</b><p><strong>'+esc(label(n))+(n?' · '+n+'/100':'')+'</strong>'+(opens?' · mở hồ sơ '+opens+' lần':'')+'</p>';body.prepend(box);}
+function patchHotSignals(){
+  window.hotSignals=function(){const out=[];(window.state?.schools||[]).forEach(s=>{normalizeDeepEvents(s);const ev=(s.events||[]).filter(e=>e.hot);if(!ev.length)return;const rank=e=>{const q=String(e.raw?.summary||e.detail||'').toLowerCase();return q.includes('bấm nút')?5:q.includes('mô hình hợp tác')?4:q.includes('chương trình')?3:q.includes('hồ sơ điện tử sunbot')?2:1;};ev.sort((a,b)=>rank(b)-rank(a));out.push({school:s,event:ev[0]});});return out;};
 }
 function patch(){
   const form=$('emailForm'),btn=form?.querySelector('.modalactions .primary');if(btn){btn.onclick=createDeepDraft;btn.textContent='Mở email nháp';}
-  window.sendEmail=createDeepDraft;
-  const r=window.renderDrawer;if(r)window.renderDrawer=function(){const out=r.apply(this,arguments);inject();return out;};
+  window.sendEmail=createDeepDraft;patchHotSignals();
+  const r=window.renderDrawer;if(r)window.renderDrawer=function(){const s=school();normalizeDeepEvents(s);const out=r.apply(this,arguments);inject();return out;};
   const info=$('emailTrackingInfo');if(info)info.textContent='Hệ thống gắn hồ sơ riêng và ghi nhận: mở hồ sơ, thời gian xem, mức cuộn, phần nội dung quan tâm và nút được bấm.';
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',patch);else patch();
