@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sunbot School OS">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b2f57"/><stop offset="1" stop-color="#0d2140"/></linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffbf32"/><stop offset="1" stop-color="#f47a2a"/></linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#62e8f4"/><stop offset="1" stop-color="#20b7d0"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity=".24"/></filter>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <circle cx="256" cy="231" r="158" fill="none" stroke="url(#cyan)" stroke-width="10" opacity=".9"/>
+  <circle cx="104" cy="210" r="17" fill="#fff" stroke="#22b8d2" stroke-width="8"/>
+  <circle cx="408" cy="210" r="17" fill="#fff" stroke="#22b8d2" stroke-width="8"/>
+  <circle cx="142" cy="366" r="17" fill="#fff" stroke="#22b8d2" stroke-width="8"/>
+  <g transform="translate(256 190)" filter="url(#shadow)">
+    <path d="M0-121 24-69 76-95 69-38 124-20 78 17 108 68 51 61 35 117 0 73-35 117-51 61-108 68-78 17-124-20-69-38-76-95-24-69Z" fill="url(#sun)"/>
+    <rect x="-108" y="-60" width="216" height="132" rx="56" fill="#fff"/>
+    <rect x="-82" y="-36" width="164" height="82" rx="35" fill="#071b34"/>
+    <path d="M-49 1q19-21 38 0" fill="none" stroke="#62e8f4" stroke-width="10" stroke-linecap="round"/>
+    <path d="M11 1q19-21 38 0" fill="none" stroke="#62e8f4" stroke-width="10" stroke-linecap="round"/>
+    <path d="M-22 25q22 22 44 0" fill="none" stroke="#62e8f4" stroke-width="10" stroke-linecap="round"/>
+    <circle cy="-81" r="13" fill="#ffb326"/>
+    <rect x="-3" y="-72" width="6" height="18" rx="3" fill="#fff"/>
+  </g>
+  <g transform="translate(242 375)" filter="url(#shadow)">
+    <path d="M-96-44 0-106 96-44V71H-96Z" fill="#f7fafc" stroke="#dce4ec" stroke-width="4"/>
+    <path d="M-106-40 0-112 106-40" fill="none" stroke="#f47a2a" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="-22" y="18" width="44" height="53" rx="20" fill="#0b2f57"/>
+    <rect x="-66" y="2" width="21" height="25" rx="4" fill="#0b2f57"/>
+    <rect x="45" y="2" width="21" height="25" rx="4" fill="#0b2f57"/>
+    <circle cy="-47" r="25" fill="#0b2f57"/>
+    <path d="M0-47v-13M0-47l11 7" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(374 379) rotate(5)" filter="url(#shadow)">
+    <rect x="-64" y="-88" width="128" height="166" rx="20" fill="#f8fbfd" stroke="#173d65" stroke-width="8"/>
+    <rect x="-30" y="-105" width="60" height="30" rx="12" fill="#ff9b25"/>
+    <g fill="none" stroke="#f47a2a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-39-42l8 8 15-18"/><path d="M-39 2l8 8 15-18"/><path d="M-39 46l8 8 15-18"/>
+    </g>
+    <g stroke="#173d65" stroke-width="8" stroke-linecap="round"><path d="M4-42h35"/><path d="M4 2h35"/><path d="M4 46h35"/></g>
+  </g>
+</svg>
