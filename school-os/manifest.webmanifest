@@ -1,0 +1,30 @@
+{
+  "id": "/app/school-os/",
+  "name": "Sunbot – Phát triển trường",
+  "short_name": "Sunbot School",
+  "description": "Ứng dụng phát triển trường và quản trị cơ hội của Sunbot Việt Nam.",
+  "lang": "vi",
+  "dir": "ltr",
+  "start_url": "./v3-runtime.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f6f7f9",
+  "theme_color": "#f47a2a",
+  "categories": ["business", "education", "productivity"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
