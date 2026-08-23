@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sunbot School OS maskable icon">
+  <rect width="512" height="512" fill="#0b2f57"/>
+  <circle cx="256" cy="256" r="184" fill="#0e3763"/>
+  <circle cx="256" cy="214" r="132" fill="#f47a2a" opacity=".18"/>
+  <g transform="translate(256 205)">
+    <path d="M0-104 20-59 64-82 59-32 106-16 67 15 92 58 43 52 30 100 0 62-30 100-43 52-92 58-67 15-106-16-59-32-64-82-20-59Z" fill="#f47a2a"/>
+    <rect x="-91" y="-46" width="182" height="111" rx="47" fill="#fff"/>
+    <rect x="-68" y="-27" width="136" height="70" rx="30" fill="#071b34"/>
+    <path d="M-41 3q16-18 32 0M9 3q16-18 32 0M-18 23q18 18 36 0" fill="none" stroke="#62e8f4" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(256 371)">
+    <path d="M-75-26 0-78 75-26V60H-75Z" fill="#fff"/>
+    <path d="M-84-23 0-83 84-23" fill="none" stroke="#ff9b25" stroke-width="12" stroke-linecap="round"/>
+    <rect x="-17" y="15" width="34" height="45" rx="15" fill="#0b2f57"/>
+    <circle cy="-30" r="20" fill="#0b2f57"/>
+    <path d="M0-30v-10M0-30l9 6" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>
