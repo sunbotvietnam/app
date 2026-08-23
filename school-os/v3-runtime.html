@@ -2,8 +2,16 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Sunbot – Phát triển trường</title>
+<meta name="theme-color" content="#f47a2a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Sunbot School">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preload" href="v3.html" as="fetch" crossorigin="anonymous">
 <link rel="preload" href="state-bridge.js" as="script">
 <link rel="preload" href="app-config.js" as="script">
@@ -21,6 +29,7 @@
 <link rel="preload" href="deep-engagement-runtime.js" as="script">
 <link rel="preload" href="governance-runtime.js" as="script">
 <link rel="preload" href="governance-deploy-guard.js" as="script">
+<link rel="preload" href="pwa-runtime.js" as="script">
 <style>body{font-family:system-ui;margin:40px;color:#1d2530}.err{max-width:720px;padding:18px;border:1px solid #e5e8ed;border-radius:14px;background:#fff}</style>
 </head>
 <body>
@@ -32,6 +41,16 @@
     if(!r.ok)throw new Error('Không tải được ứng dụng: HTTP '+r.status);
     let html=await r.text();
     const ts=Date.now();
+    html=html.replace('</head>',
+      '<meta name="theme-color" content="#f47a2a">'+
+      '<link rel="manifest" href="manifest.webmanifest">'+
+      '<link rel="icon" href="icon.svg" type="image/svg+xml">'+
+      '<link rel="apple-touch-icon" href="icon.svg">'+
+      '<meta name="apple-mobile-web-app-capable" content="yes">'+
+      '<meta name="apple-mobile-web-app-status-bar-style" content="default">'+
+      '<meta name="apple-mobile-web-app-title" content="Sunbot School">'+
+      '<meta name="mobile-web-app-capable" content="yes">'+
+      '</head>');
     html=html.replace('</body>',
       '<script src="state-bridge.js?ts='+ts+'"><\/script>'+
       '<script src="app-config.js?ts='+ts+'"><\/script>'+
@@ -49,6 +68,7 @@
       '<script src="deep-engagement-runtime.js?ts='+ts+'"><\/script>'+
       '<script src="governance-runtime.js?ts='+ts+'"><\/script>'+
       '<script src="governance-deploy-guard.js?ts='+ts+'"><\/script>'+
+      '<script src="pwa-runtime.js?ts='+ts+'"><\/script>'+
       '</body>');
     document.open();document.write(html);document.close();
   }catch(e){document.getElementById('loading').outerHTML='<div class="err"><b>Không mở được ứng dụng.</b><p>'+String(e.message||e)+'</p></div>';}
