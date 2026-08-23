@@ -9,12 +9,16 @@
 <link rel="preload" href="app-config.js" as="script">
 <link rel="preload" href="backend-adapter.js" as="script">
 <link rel="preload" href="multiuser-runtime.js" as="script">
+<link rel="preload" href="account-security-runtime.js" as="script">
+<link rel="preload" href="team-hierarchy-runtime.js" as="script">
 <link rel="preload" href="record-editor-runtime.js" as="script">
 <link rel="preload" href="business-polish-runtime.js" as="script">
 <link rel="preload" href="ui-guide-runtime.js" as="script">
 <link rel="preload" href="language-vi-runtime.js" as="script">
 <link rel="preload" href="email-intelligence-runtime.js" as="script">
 <link rel="preload" href="deep-engagement-runtime.js" as="script">
+<link rel="preload" href="governance-runtime.js" as="script">
+<link rel="preload" href="governance-deploy-guard.js" as="script">
 <style>body{font-family:system-ui;margin:40px;color:#1d2530}.err{max-width:720px;padding:18px;border:1px solid #e5e8ed;border-radius:14px;background:#fff}</style>
 </head>
 <body>
@@ -22,10 +26,26 @@
 <script>
 (async function(){
   try{
-    const r=await fetch('v3.html',{cache:'no-cache'});
+    const r=await fetch('v3.html?ts='+Date.now(),{cache:'no-store'});
     if(!r.ok)throw new Error('Không tải được ứng dụng: HTTP '+r.status);
     let html=await r.text();
-    html=html.replace('</body>','<script src="state-bridge.js"><\/script><script src="app-config.js"><\/script><script src="backend-adapter.js"><\/script><script src="multiuser-runtime.js"><\/script><script src="record-editor-runtime.js"><\/script><script src="business-polish-runtime.js"><\/script><script src="ui-guide-runtime.js"><\/script><script src="language-vi-runtime.js"><\/script><script src="email-intelligence-runtime.js"><\/script><script src="deep-engagement-runtime.js"><\/script></body>');
+    const ts=Date.now();
+    html=html.replace('</body>',
+      '<script src="state-bridge.js?ts='+ts+'"><\/script>'+
+      '<script src="app-config.js?ts='+ts+'"><\/script>'+
+      '<script src="backend-adapter.js?ts='+ts+'"><\/script>'+
+      '<script src="multiuser-runtime.js?ts='+ts+'"><\/script>'+
+      '<script src="account-security-runtime.js?ts='+ts+'"><\/script>'+
+      '<script src="team-hierarchy-runtime.js?ts='+ts+'"><\/script>'+
+      '<script src="record-editor-runtime.js?ts='+ts+'"><\/script>'+
+      '<script src="business-polish-runtime.js?ts='+ts+'"><\/script>'+
+      '<script src="ui-guide-runtime.js?ts='+ts+'"><\/script>'+
+      '<script src="language-vi-runtime.js?ts='+ts+'"><\/script>'+
+      '<script src="email-intelligence-runtime.js?ts='+ts+'"><\/script>'+
+      '<script src="deep-engagement-runtime.js?ts='+ts+'"><\/script>'+
+      '<script src="governance-runtime.js?ts='+ts+'"><\/script>'+
+      '<script src="governance-deploy-guard.js?ts='+ts+'"><\/script>'+
+      '</body>');
     document.open();document.write(html);document.close();
   }catch(e){document.getElementById('loading').outerHTML='<div class="err"><b>Không mở được ứng dụng.</b><p>'+String(e.message||e)+'</p></div>';}
 })();
