@@ -1,5 +1,5 @@
-const CACHE='sunbot-school-os-pwa-20260823-01';
-const SHELL=['./v3-runtime.html','./v3.html','./manifest.webmanifest','./icon.svg','./icon-maskable.svg'];
+const CACHE='sunbot-school-os-pwa-20260823-02';
+const SHELL=['./v3-runtime.html','./v3.html','./manifest.webmanifest','./icon.svg','./icon-maskable.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).catch(()=>{}).then(()=>self.skipWaiting()));
 });
