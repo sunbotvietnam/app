@@ -1,12 +1,149 @@
-/* Sunbot School OS - Web App services v0.4 */
-const SCHOOL_OS={VERSION:'0.4',SHEETS:{ACTIVITIES:'SO_ACTIVITIES',TRACKED_LINKS:'SO_TRACKED_LINKS',EMAIL_LOG:'SO_EMAIL_LOG',SCHOOLS:'SO_SCHOOLS',CONTACTS:'SO_CONTACTS',TASKS:'SO_TASKS',OPPORTUNITIES:'SO_OPPORTUNITIES',PROPOSALS:'SO_SCHOOL_PROPOSALS',META:'SO_META'},EVENT:{EMAIL_SENT:'EMAIL_SENT',LINK_CREATED:'LINK_CREATED',LINK_OPENED:'LINK_OPENED',MANUAL_ACTIVITY:'MANUAL_ACTIVITY',CORE_STATE_SAVED:'CORE_STATE_SAVED'}};
-function schoolOsSetup(){const props=PropertiesService.getScriptProperties();let id=props.getProperty('SCHOOL_OS_SPREADSHEET_ID'),ss=id?SpreadsheetApp.openById(id):SpreadsheetApp.create('SUNBOT_SCHOOL_OS_DATA');if(!id)props.setProperty('SCHOOL_OS_SPREADSHEET_ID',ss.getId());ensureSheet_(ss,SCHOOL_OS.SHEETS.ACTIVITIES,['event_id','timestamp','school_id','school_name','contact_id','contact_name','event_type','actor','channel','summary','detail_json','source_id','hot_signal']);ensureSheet_(ss,SCHOOL_OS.SHEETS.TRACKED_LINKS,['track_id','created_at','school_id','school_name','contact_id','contact_name','document_id','document_name','destination_url','created_by','status','open_count','first_open_at','last_open_at']);ensureSheet_(ss,SCHOOL_OS.SHEETS.EMAIL_LOG,['email_id','sent_at','school_id','school_name','contact_id','contact_name','to_email','subject','template_key','document_ids','sent_by','status','message']);ensureSheet_(ss,SCHOOL_OS.SHEETS.SCHOOLS,['school_id','school_name','region','school_type','status','owner','next_action','next_action_date','risk','source','children','steam_status','policy_status','renewal_date','updated_at']);ensureSheet_(ss,SCHOOL_OS.SHEETS.CONTACTS,['contact_id','school_id','name','role','decision_role','email','phone','sentiment','status','updated_at']);ensureSheet_(ss,SCHOOL_OS.SHEETS.TASKS,['task_id','title','school_id','school_name','owner','due','risk','done','updated_at']);ensureSheet_(ss,SCHOOL_OS.SHEETS.OPPORTUNITIES,['opportunity_id','school_id','school_name','stage','title','owner','value','fit','need','authority','funding','timing','regulation','capacity','updated_at']);ensureSheet_(ss,SCHOOL_OS.SHEETS.META,['key','value','updated_at']);if(typeof ensureAuthSheets_==='function')ensureAuthSheets_(ss);if(typeof ensureRecordSchemas_==='function')ensureRecordSchemas_(ss);if(typeof ensureGovernanceSheets_==='function')ensureGovernanceSheets_(ss);if(!props.getProperty('SCHOOL_OS_API_KEY'))props.setProperty('SCHOOL_OS_API_KEY',Utilities.getUuid().replace(/-/g,''));if(typeof ensureCoreMeta_==='function')ensureCoreMeta_();return{success:true,version:SCHOOL_OS.VERSION,spreadsheetId:ss.getId(),spreadsheetUrl:ss.getUrl(),apiKey:props.getProperty('SCHOOL_OS_API_KEY'),note:'API key chỉ dùng cho bootstrap/quản trị.'};}
-function doGet(e){try{const p=(e&&e.parameter)||{};if(p.t)return handleTrackedOpen_(p.t);return jsonOutput_({success:true,service:'Sunbot School OS',version:SCHOOL_OS.VERSION,status:'ready'});}catch(err){return jsonOutput_({success:false,error:errorText_(err)});}}
-function doPost(e){try{const body=parseBody_(e),action=String(body.action||'').trim();if(action==='health')return jsonOutput_({success:true,status:'ok',version:SCHOOL_OS.VERSION});if(action==='login')return jsonOutput_(loginApi_(body));if(action==='logout')return jsonOutput_(logoutApi_(body));if(action==='me')return jsonOutput_(meApi_(body));const auth=requireAuthorized_(body,['ADMIN','LEADER','STAFF']);let result;switch(action){case'change_password':result=changePasswordApi_(body,auth);break;case'list_users':result=listUsersApi_(body,auth);break;case'admin_upsert_user':result=adminUpsertUserApi_(body,auth);break;case'admin_reset_password':result=adminResetPasswordApi_(body,auth);break;case'admin_set_user_status':result=adminSetUserStatusApi_(body,auth);break;case'list_school_proposals':result=listSchoolProposalsApi_(body,auth);break;case'submit_school_proposal':result=submitSchoolProposalApi_(body,auth);break;case'review_school_proposal':result=reviewSchoolProposalApi_(body,auth);break;case'send_email':assertSchoolScope_(body,auth);result=sendSchoolEmail_(body,auth);break;case'create_tracked_link':assertSchoolScope_(body,auth);result=createTrackedLink_(body,auth);break;case'log_activity':assertSchoolScope_(body,auth);result=logActivityApi_(body,auth);break;case'get_activity':assertSchoolScope_(body,auth);result=getActivityApi_(body,auth);break;case'list_core_records':result=listCoreRecordsApi_(body,auth);break;case'upsert_school':result=upsertSchoolApi_(body,auth);break;case'upsert_contact':result=upsertContactApi_(body,auth);break;case'upsert_task':result=upsertTaskApi_(body,auth);break;case'upsert_opportunity':result=upsertOpportunityApi_(body,auth);break;case'delete_record':result=deleteRecordApi_(body,auth);break;case'get_core_state':if(!auth.via_api_key&&String(auth.user.role)!=='ADMIN')throw new Error('Chỉ Admin được đọc snapshot toàn hệ thống.');result=getCoreStateApi_(body);break;case'save_core_state':if(!auth.via_api_key&&String(auth.user.role)!=='ADMIN')throw new Error('Chỉ Admin được ghi snapshot toàn hệ thống.');result=saveCoreStateApi_(Object.assign({},body,{actor:auth.user.email}));break;default:throw new Error('Action không hợp lệ: '+action);}return jsonOutput_(result);}catch(err){return jsonOutput_({success:false,error:errorText_(err)});}}
+/* Sunbot School OS - Web App services v0.5 */
+const SCHOOL_OS={
+  VERSION:'0.5',
+  PUBLIC_PROFILE_BASE:'https://sunbotvietnam.github.io/app/profile/',
+  SHEETS:{ACTIVITIES:'SO_ACTIVITIES',TRACKED_LINKS:'SO_TRACKED_LINKS',EMAIL_LOG:'SO_EMAIL_LOG',SCHOOLS:'SO_SCHOOLS',CONTACTS:'SO_CONTACTS',TASKS:'SO_TASKS',OPPORTUNITIES:'SO_OPPORTUNITIES',PROPOSALS:'SO_SCHOOL_PROPOSALS',META:'SO_META'},
+  EVENT:{EMAIL_SENT:'EMAIL_SENT',LINK_CREATED:'LINK_CREATED',LINK_OPENED:'LINK_OPENED',MANUAL_ACTIVITY:'MANUAL_ACTIVITY',CORE_STATE_SAVED:'CORE_STATE_SAVED'}
+};
+
+function schoolOsSetup(){
+  const props=PropertiesService.getScriptProperties();
+  let id=props.getProperty('SCHOOL_OS_SPREADSHEET_ID'),ss=id?SpreadsheetApp.openById(id):SpreadsheetApp.create('SUNBOT_SCHOOL_OS_DATA');
+  if(!id)props.setProperty('SCHOOL_OS_SPREADSHEET_ID',ss.getId());
+  ensureSheet_(ss,SCHOOL_OS.SHEETS.ACTIVITIES,['event_id','timestamp','school_id','school_name','contact_id','contact_name','event_type','actor','channel','summary','detail_json','source_id','hot_signal']);
+  const tracked=ensureSheet_(ss,SCHOOL_OS.SHEETS.TRACKED_LINKS,['track_id','created_at','school_id','school_name','contact_id','contact_name','document_id','document_name','destination_url','created_by','status','open_count','first_open_at','last_open_at','public_code']);
+  if(typeof ensureColumns_==='function')ensureColumns_(tracked,['public_code']);
+  ensureSheet_(ss,SCHOOL_OS.SHEETS.EMAIL_LOG,['email_id','sent_at','school_id','school_name','contact_id','contact_name','to_email','subject','template_key','document_ids','sent_by','status','message']);
+  ensureSheet_(ss,SCHOOL_OS.SHEETS.SCHOOLS,['school_id','school_name','region','school_type','status','owner','next_action','next_action_date','risk','source','children','steam_status','policy_status','renewal_date','updated_at']);
+  ensureSheet_(ss,SCHOOL_OS.SHEETS.CONTACTS,['contact_id','school_id','name','role','decision_role','email','phone','sentiment','status','updated_at']);
+  ensureSheet_(ss,SCHOOL_OS.SHEETS.TASKS,['task_id','title','school_id','school_name','owner','due','risk','done','updated_at']);
+  ensureSheet_(ss,SCHOOL_OS.SHEETS.OPPORTUNITIES,['opportunity_id','school_id','school_name','stage','title','owner','value','fit','need','authority','funding','timing','regulation','capacity','updated_at']);
+  ensureSheet_(ss,SCHOOL_OS.SHEETS.META,['key','value','updated_at']);
+  if(typeof ensureAuthSheets_==='function')ensureAuthSheets_(ss);
+  if(typeof ensureRecordSchemas_==='function')ensureRecordSchemas_(ss);
+  if(typeof ensureGovernanceSheets_==='function')ensureGovernanceSheets_(ss);
+  if(!props.getProperty('SCHOOL_OS_API_KEY'))props.setProperty('SCHOOL_OS_API_KEY',Utilities.getUuid().replace(/-/g,''));
+  if(!props.getProperty('SCHOOL_OS_PUBLIC_PROFILE_BASE'))props.setProperty('SCHOOL_OS_PUBLIC_PROFILE_BASE',SCHOOL_OS.PUBLIC_PROFILE_BASE);
+  if(typeof ensureCoreMeta_==='function')ensureCoreMeta_();
+  return{success:true,version:SCHOOL_OS.VERSION,spreadsheetId:ss.getId(),spreadsheetUrl:ss.getUrl(),apiKey:props.getProperty('SCHOOL_OS_API_KEY'),publicProfileBase:publicProfileBase_(),note:'API key chỉ dùng cho bootstrap/quản trị.'};
+}
+
+function doGet(e){
+  try{
+    const p=(e&&e.parameter)||{};
+    if(p.t)return handleTrackedOpen_(p.t); // backward compatibility for already-sent links
+    return jsonOutput_({success:true,service:'Sunbot School OS',version:SCHOOL_OS.VERSION,status:'ready',public_profile_base:publicProfileBase_()});
+  }catch(err){return jsonOutput_({success:false,error:errorText_(err)});}
+}
+
+function doPost(e){
+  try{
+    const body=parseBody_(e),action=String(body.action||'').trim();
+    if(action==='health')return jsonOutput_({success:true,status:'ok',version:SCHOOL_OS.VERSION,public_profile_base:publicProfileBase_()});
+    if(action==='resolve_public_link')return jsonOutput_(resolvePublicLinkApi_(body));
+    if(action==='login')return jsonOutput_(loginApi_(body));
+    if(action==='logout')return jsonOutput_(logoutApi_(body));
+    if(action==='me')return jsonOutput_(meApi_(body));
+    const auth=requireAuthorized_(body,['ADMIN','LEADER','STAFF']);
+    let result;
+    switch(action){
+      case'change_password':result=changePasswordApi_(body,auth);break;
+      case'list_users':result=listUsersApi_(body,auth);break;
+      case'admin_upsert_user':result=adminUpsertUserApi_(body,auth);break;
+      case'admin_reset_password':result=adminResetPasswordApi_(body,auth);break;
+      case'admin_set_user_status':result=adminSetUserStatusApi_(body,auth);break;
+      case'list_school_proposals':result=listSchoolProposalsApi_(body,auth);break;
+      case'submit_school_proposal':result=submitSchoolProposalApi_(body,auth);break;
+      case'review_school_proposal':result=reviewSchoolProposalApi_(body,auth);break;
+      case'send_email':assertSchoolScope_(body,auth);result=sendSchoolEmail_(body,auth);break;
+      case'create_tracked_link':assertSchoolScope_(body,auth);result=createTrackedLink_(body,auth);break;
+      case'log_activity':assertSchoolScope_(body,auth);result=logActivityApi_(body,auth);break;
+      case'get_activity':assertSchoolScope_(body,auth);result=getActivityApi_(body,auth);break;
+      case'list_core_records':result=listCoreRecordsApi_(body,auth);break;
+      case'upsert_school':result=upsertSchoolApi_(body,auth);break;
+      case'upsert_contact':result=upsertContactApi_(body,auth);break;
+      case'upsert_task':result=upsertTaskApi_(body,auth);break;
+      case'upsert_opportunity':result=upsertOpportunityApi_(body,auth);break;
+      case'delete_record':result=deleteRecordApi_(body,auth);break;
+      case'get_core_state':if(!auth.via_api_key&&String(auth.user.role)!=='ADMIN')throw new Error('Chỉ Admin được đọc snapshot toàn hệ thống.');result=getCoreStateApi_(body);break;
+      case'save_core_state':if(!auth.via_api_key&&String(auth.user.role)!=='ADMIN')throw new Error('Chỉ Admin được ghi snapshot toàn hệ thống.');result=saveCoreStateApi_(Object.assign({},body,{actor:auth.user.email}));break;
+      default:throw new Error('Action không hợp lệ: '+action);
+    }
+    return jsonOutput_(result);
+  }catch(err){return jsonOutput_({success:false,error:errorText_(err)});}
+}
+
 function assertSchoolScope_(body,auth){if(auth.via_api_key)return;const id=clean_(body.school_id);if(id)requireSchoolAccess_(id,auth.user);}
-function sendSchoolEmail_(body,auth){const to=clean_(body.to_email||body.to),subject=clean_(body.subject),html=String(body.html_body||body.html||''),text=String(body.text_body||body.text||stripHtml_(html));if(!to||!subject)throw new Error('Thiếu email người nhận hoặc tiêu đề.');const actor=(auth&&auth.user&&auth.user.email)||body.sent_by||body.actor||'',links=Array.isArray(body.documents)?body.documents:[],tracked=links.map(doc=>{const r=createTrackedLink_({school_id:body.school_id,school_name:body.school_name,contact_id:body.contact_id,contact_name:body.contact_name,document_id:doc.document_id||doc.id,document_name:doc.document_name||doc.name,destination_url:doc.destination_url||doc.url,created_by:actor},auth);return{name:doc.document_name||doc.name||'Tài liệu',url:r.tracked_url,track_id:r.track_id};}),linksHtml=tracked.length?'<div style="margin-top:18px"><b>Tài liệu:</b><ul>'+tracked.map(x=>'<li><a href="'+escapeHtml_(x.url)+'">'+escapeHtml_(x.name)+'</a></li>').join('')+'</ul></div>':'';GmailApp.sendEmail(to,subject,text,{htmlBody:html+linksHtml,name:clean_(body.sender_name)||'Sunbot'});const emailId='EM_'+Utilities.getUuid();appendRow_(SCHOOL_OS.SHEETS.EMAIL_LOG,[emailId,new Date(),body.school_id||'',body.school_name||'',body.contact_id||'',body.contact_name||'',to,subject,body.template_key||'',tracked.map(x=>x.track_id).join(','),actor,'SENT','']);logEvent_({school_id:body.school_id,school_name:body.school_name,contact_id:body.contact_id,contact_name:body.contact_name,event_type:SCHOOL_OS.EVENT.EMAIL_SENT,actor:actor,channel:'Email',summary:'Đã gửi email: '+subject,detail:{to_email:to,email_id:emailId,template_key:body.template_key||'',tracked_links:tracked},source_id:emailId,hot_signal:false});applySchoolWorkflowEvent_(body.school_id,'EMAIL_SENT',{},auth.user);return{success:true,email_id:emailId,tracked_documents:tracked};}
-function createTrackedLink_(body,auth){const destination=clean_(body.destination_url||body.url);if(!destination)throw new Error('Thiếu URL tài liệu.');if(!/^https?:\/\//i.test(destination))throw new Error('URL tài liệu không hợp lệ.');const actor=(auth&&auth.user&&auth.user.email)||body.created_by||body.actor||'',trackId='TRK_'+Utilities.getUuid().replace(/-/g,'');appendRow_(SCHOOL_OS.SHEETS.TRACKED_LINKS,[trackId,new Date(),body.school_id||'',body.school_name||'',body.contact_id||'',body.contact_name||'',body.document_id||'',body.document_name||'',destination,actor,'ACTIVE',0,'','']);logEvent_({school_id:body.school_id,school_name:body.school_name,contact_id:body.contact_id,contact_name:body.contact_name,event_type:SCHOOL_OS.EVENT.LINK_CREATED,actor:actor,channel:'Tài liệu',summary:'Tạo link theo dõi: '+(body.document_name||'Tài liệu'),detail:{track_id:trackId,document_id:body.document_id||'',destination_url:destination},source_id:trackId,hot_signal:false});const url=ScriptApp.getService().getUrl();if(!url)throw new Error('Apps Script chưa deploy Web App.');return{success:true,track_id:trackId,tracked_url:url+'?t='+encodeURIComponent(trackId)};}
-function handleTrackedOpen_(trackId){const ss=getDataSpreadsheet_(),sh=ss.getSheetByName(SCHOOL_OS.SHEETS.TRACKED_LINKS),values=sh.getDataRange().getValues(),idx=headerIndex_(values[0]);for(let r=1;r<values.length;r++){if(String(values[r][idx.track_id])!==String(trackId))continue;if(String(values[r][idx.status])!=='ACTIVE')throw new Error('Link không còn hoạt động.');const now=new Date(),count=Number(values[r][idx.open_count]||0)+1;sh.getRange(r+1,idx.open_count+1).setValue(count);if(!values[r][idx.first_open_at])sh.getRange(r+1,idx.first_open_at+1).setValue(now);sh.getRange(r+1,idx.last_open_at+1).setValue(now);const schoolId=values[r][idx.school_id];logEvent_({school_id:schoolId,school_name:values[r][idx.school_name],contact_id:values[r][idx.contact_id],contact_name:values[r][idx.contact_name],event_type:SCHOOL_OS.EVENT.LINK_OPENED,actor:'external_contact',channel:'Tài liệu',summary:'Đã mở '+(values[r][idx.document_name]||'tài liệu')+(count>1?' lần '+count:''),detail:{track_id:trackId,open_count:count,document_id:values[r][idx.document_id]},source_id:trackId,hot_signal:true});applySchoolWorkflowEvent_(schoolId,'LINK_OPENED',{open_count:count},{email:'external_contact'});return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url='+escapeHtml_(values[r][idx.destination_url])+'"><title>Đang mở tài liệu</title></head><body style="font-family:system-ui;padding:32px">Đang mở tài liệu Sunbot...</body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}throw new Error('Không tìm thấy link theo dõi.');}
+
+function sendSchoolEmail_(body,auth){
+  const to=clean_(body.to_email||body.to),subject=clean_(body.subject),html=String(body.html_body||body.html||''),text=String(body.text_body||body.text||stripHtml_(html));
+  if(!to||!subject)throw new Error('Thiếu email người nhận hoặc tiêu đề.');
+  const actor=(auth&&auth.user&&auth.user.email)||body.sent_by||body.actor||'',links=Array.isArray(body.documents)?body.documents:[];
+  const tracked=links.map(doc=>{const r=createTrackedLink_({school_id:body.school_id,school_name:body.school_name,contact_id:body.contact_id,contact_name:body.contact_name,document_id:doc.document_id||doc.id,document_name:doc.document_name||doc.name,destination_url:doc.destination_url||doc.url,created_by:actor},auth);return{name:doc.document_name||doc.name||'Tài liệu',url:r.tracked_url,track_id:r.track_id,public_code:r.public_code};});
+  const linksHtml=tracked.length?'<div style="margin-top:18px"><b>Tài liệu Sunbot:</b><ul>'+tracked.map(x=>'<li><a href="'+escapeHtml_(x.url)+'">'+escapeHtml_(x.name)+'</a></li>').join('')+'</ul></div>':'';
+  GmailApp.sendEmail(to,subject,text,{htmlBody:html+linksHtml,name:clean_(body.sender_name)||'Sunbot'});
+  const emailId='EM_'+Utilities.getUuid();
+  appendRow_(SCHOOL_OS.SHEETS.EMAIL_LOG,[emailId,new Date(),body.school_id||'',body.school_name||'',body.contact_id||'',body.contact_name||'',to,subject,body.template_key||'',tracked.map(x=>x.track_id).join(','),actor,'SENT','']);
+  logEvent_({school_id:body.school_id,school_name:body.school_name,contact_id:body.contact_id,contact_name:body.contact_name,event_type:SCHOOL_OS.EVENT.EMAIL_SENT,actor:actor,channel:'Email',summary:'Đã gửi email: '+subject,detail:{to_email:to,email_id:emailId,template_key:body.template_key||'',tracked_links:tracked},source_id:emailId,hot_signal:false});
+  applySchoolWorkflowEvent_(body.school_id,'EMAIL_SENT',{},auth.user);
+  return{success:true,email_id:emailId,tracked_documents:tracked};
+}
+
+function publicProfileBase_(){
+  const p=PropertiesService.getScriptProperties().getProperty('SCHOOL_OS_PUBLIC_PROFILE_BASE')||SCHOOL_OS.PUBLIC_PROFILE_BASE;
+  return String(p).replace(/\/?$/,'/');
+}
+function generatePublicCode_(){
+  const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for(let attempt=0;attempt<20;attempt++){
+    const bytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,Utilities.getUuid()+Date.now()+Math.random());
+    let code='';for(let i=0;i<7;i++)code+=alphabet[(bytes[i]<0?bytes[i]+256:bytes[i])%alphabet.length];
+    if(!sheetObjects_(SCHOOL_OS.SHEETS.TRACKED_LINKS).some(x=>String(x.public_code||'').toUpperCase()===code))return code;
+  }
+  throw new Error('Không tạo được mã link công khai.');
+}
+
+function createTrackedLink_(body,auth){
+  const destination=clean_(body.destination_url||body.url);if(!destination)throw new Error('Thiếu URL tài liệu.');if(!/^https?:\/\//i.test(destination))throw new Error('URL tài liệu không hợp lệ.');
+  const actor=(auth&&auth.user&&auth.user.email)||body.created_by||body.actor||'',trackId='TRK_'+Utilities.getUuid().replace(/-/g,''),publicCode=generatePublicCode_();
+  const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS.SHEETS.TRACKED_LINKS);if(typeof ensureColumns_==='function')ensureColumns_(sh,['public_code']);
+  const headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(String);
+  const values={track_id:trackId,created_at:new Date(),school_id:body.school_id||'',school_name:body.school_name||'',contact_id:body.contact_id||'',contact_name:body.contact_name||'',document_id:body.document_id||'',document_name:body.document_name||'',destination_url:destination,created_by:actor,status:'ACTIVE',open_count:0,first_open_at:'',last_open_at:'',public_code:publicCode};
+  sh.appendRow(headers.map(h=>Object.prototype.hasOwnProperty.call(values,h)?values[h]:''));
+  logEvent_({school_id:body.school_id,school_name:body.school_name,contact_id:body.contact_id,contact_name:body.contact_name,event_type:SCHOOL_OS.EVENT.LINK_CREATED,actor:actor,channel:'Tài liệu',summary:'Tạo link theo dõi: '+(body.document_name||'Tài liệu'),detail:{track_id:trackId,public_code:publicCode,document_id:body.document_id||'',destination_url:destination},source_id:trackId,hot_signal:false});
+  return{success:true,track_id:trackId,public_code:publicCode,tracked_url:publicProfileBase_()+'?c='+encodeURIComponent(publicCode)};
+}
+
+function resolvePublicLinkApi_(body){
+  const code=String(body.public_code||body.code||'').trim().toUpperCase();if(!/^[A-Z2-9]{6,12}$/.test(code))throw new Error('LINK_INVALID');
+  const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS.SHEETS.TRACKED_LINKS),values=sh.getDataRange().getValues(),idx=headerIndex_(values[0]);
+  for(let r=1;r<values.length;r++){
+    if(String(values[r][idx.public_code]||'').trim().toUpperCase()!==code)continue;
+    if(String(values[r][idx.status])!=='ACTIVE')throw new Error('LINK_INACTIVE');
+    registerTrackedOpen_(sh,values,idx,r,'public_code');
+    return{success:true,destination_url:String(values[r][idx.destination_url]||''),document_name:String(values[r][idx.document_name]||'Hồ sơ Sunbot'),school_name:String(values[r][idx.school_name]||''),public_code:code};
+  }
+  throw new Error('LINK_NOT_FOUND');
+}
+
+function registerTrackedOpen_(sh,values,idx,r,source){
+  const now=new Date(),count=Number(values[r][idx.open_count]||0)+1;
+  sh.getRange(r+1,idx.open_count+1).setValue(count);if(!values[r][idx.first_open_at])sh.getRange(r+1,idx.first_open_at+1).setValue(now);sh.getRange(r+1,idx.last_open_at+1).setValue(now);
+  const schoolId=values[r][idx.school_id],trackId=values[r][idx.track_id];
+  logEvent_({school_id:schoolId,school_name:values[r][idx.school_name],contact_id:values[r][idx.contact_id],contact_name:values[r][idx.contact_name],event_type:SCHOOL_OS.EVENT.LINK_OPENED,actor:'external_contact',channel:'Tài liệu',summary:'Đã mở '+(values[r][idx.document_name]||'tài liệu')+(count>1?' lần '+count:''),detail:{track_id:trackId,public_code:idx.public_code!=null?values[r][idx.public_code]:'',open_count:count,document_id:values[r][idx.document_id],source:source||'legacy'},source_id:trackId,hot_signal:true});
+  applySchoolWorkflowEvent_(schoolId,'LINK_OPENED',{open_count:count},{email:'external_contact'});
+}
+
+function handleTrackedOpen_(trackId){
+  const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS.SHEETS.TRACKED_LINKS),values=sh.getDataRange().getValues(),idx=headerIndex_(values[0]);
+  for(let r=1;r<values.length;r++){
+    if(String(values[r][idx.track_id])!==String(trackId))continue;if(String(values[r][idx.status])!=='ACTIVE')throw new Error('Link không còn hoạt động.');
+    registerTrackedOpen_(sh,values,idx,r,'legacy_url');
+    return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url='+escapeHtml_(values[r][idx.destination_url])+'"><title>Hồ sơ Sunbot</title></head><body style="font-family:system-ui;padding:32px">Đang mở hồ sơ Sunbot...</body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  throw new Error('Không tìm thấy link theo dõi.');
+}
+
 function logActivityApi_(body,auth){const actor=(auth&&auth.user&&auth.user.email)||body.actor||'',type=body.event_type||SCHOOL_OS.EVENT.MANUAL_ACTIVITY,id=logEvent_({school_id:body.school_id,school_name:body.school_name,contact_id:body.contact_id,contact_name:body.contact_name,event_type:type,actor:actor,channel:body.channel,summary:body.summary,detail:body.detail||{},source_id:body.source_id||'',hot_signal:!!body.hot_signal});applySchoolWorkflowEvent_(body.school_id,type,body.detail||{},auth.user);return{success:true,event_id:id};}
 function getActivityApi_(body){const id=clean_(body.school_id);if(!id)throw new Error('Thiếu school_id.');const limit=Math.max(1,Math.min(Number(body.limit||100),500)),rows=sheetObjects_(SCHOOL_OS.SHEETS.ACTIVITIES).filter(x=>String(x.school_id)===id).sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp)).slice(0,limit).map(x=>{try{x.detail=x.detail_json?JSON.parse(x.detail_json):{};}catch(e){x.detail={};}delete x.detail_json;return x;});return{success:true,activities:rows};}
 function logEvent_(e){const id='EV_'+Utilities.getUuid();appendRow_(SCHOOL_OS.SHEETS.ACTIVITIES,[id,new Date(),e.school_id||'',e.school_name||'',e.contact_id||'',e.contact_name||'',e.event_type||SCHOOL_OS.EVENT.MANUAL_ACTIVITY,e.actor||'',e.channel||'',e.summary||'',JSON.stringify(e.detail||{}),e.source_id||'',e.hot_signal?'TRUE':'FALSE']);return id;}
