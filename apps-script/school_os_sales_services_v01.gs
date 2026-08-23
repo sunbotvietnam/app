@@ -1,6 +1,6 @@
-/* Sunbot School OS - Web App services v0.5 */
+/* Sunbot School OS - Web App services v0.6 */
 const SCHOOL_OS={
-  VERSION:'0.5',
+  VERSION:'0.6',
   PUBLIC_PROFILE_BASE:'https://sunbotvietnam.github.io/app/profile/',
   SHEETS:{ACTIVITIES:'SO_ACTIVITIES',TRACKED_LINKS:'SO_TRACKED_LINKS',EMAIL_LOG:'SO_EMAIL_LOG',SCHOOLS:'SO_SCHOOLS',CONTACTS:'SO_CONTACTS',TASKS:'SO_TASKS',OPPORTUNITIES:'SO_OPPORTUNITIES',PROPOSALS:'SO_SCHOOL_PROPOSALS',META:'SO_META'},
   EVENT:{EMAIL_SENT:'EMAIL_SENT',LINK_CREATED:'LINK_CREATED',LINK_OPENED:'LINK_OPENED',MANUAL_ACTIVITY:'MANUAL_ACTIVITY',CORE_STATE_SAVED:'CORE_STATE_SAVED'}
@@ -31,7 +31,7 @@ function schoolOsSetup(){
 function doGet(e){
   try{
     const p=(e&&e.parameter)||{};
-    if(p.t)return handleTrackedOpen_(p.t); // backward compatibility for already-sent links
+    if(p.t)return handleTrackedOpen_(p.t);
     return jsonOutput_({success:true,service:'Sunbot School OS',version:SCHOOL_OS.VERSION,status:'ready',public_profile_base:publicProfileBase_()});
   }catch(err){return jsonOutput_({success:false,error:errorText_(err)});}
 }
@@ -109,10 +109,21 @@ function createTrackedLink_(body,auth){
   const sh=getDataSpreadsheet_().getSheetByName(SCHOOL_OS.SHEETS.TRACKED_LINKS);if(typeof ensureColumns_==='function')ensureColumns_(sh,['public_code']);
   const headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(String);
   const values={track_id:trackId,created_at:new Date(),school_id:body.school_id||'',school_name:body.school_name||'',contact_id:body.contact_id||'',contact_name:body.contact_name||'',document_id:body.document_id||'',document_name:body.document_name||'',destination_url:destination,created_by:actor,status:'ACTIVE',open_count:0,first_open_at:'',last_open_at:'',public_code:publicCode};
+  const insertedRow=sh.getLastRow()+1;
   sh.appendRow(headers.map(h=>Object.prototype.hasOwnProperty.call(values,h)?values[h]:''));
-  logEvent_({school_id:body.school_id,school_name:body.school_name,contact_id:body.contact_id,contact_name:body.contact_name,event_type:SCHOOL_OS.EVENT.LINK_CREATED,actor:actor,channel:'Tài liệu',summary:'Tạo link theo dõi: '+(body.document_name||'Tài liệu'),detail:{track_id:trackId,public_code:publicCode,document_id:body.document_id||'',destination_url:destination},source_id:trackId,hot_signal:false});
-  return{success:true,track_id:trackId,public_code:publicCode,tracked_url:publicProfileBase_()+'?c='+encodeURIComponent(publicCode)};
+  let portalRegistration={required:false,registered:false};
+  try{
+    if(typeof registerPortalAssetLinkServer_==='function')portalRegistration=registerPortalAssetLinkServer_(body,destination,actor);
+    else if(isPortalDestinationFallback_(body,destination))throw new Error('PORTAL_REGISTRY_MODULE_MISSING');
+  }catch(err){
+    try{if(insertedRow<=sh.getLastRow())sh.deleteRow(insertedRow);}catch(cleanupErr){}
+    throw err;
+  }
+  logEvent_({school_id:body.school_id,school_name:body.school_name,contact_id:body.contact_id,contact_name:body.contact_name,event_type:SCHOOL_OS.EVENT.LINK_CREATED,actor:actor,channel:'Tài liệu',summary:'Tạo link theo dõi: '+(body.document_name||'Tài liệu'),detail:{track_id:trackId,public_code:publicCode,document_id:body.document_id||'',destination_url:destination,portal_registration:portalRegistration},source_id:trackId,hot_signal:false});
+  return{success:true,track_id:trackId,public_code:publicCode,tracked_url:publicProfileBase_()+'?c='+encodeURIComponent(publicCode),portal_registration:portalRegistration};
 }
+
+function isPortalDestinationFallback_(body,destination){return String((body||{}).document_id||'').toUpperCase()==='EPROFILE'&&/sunbotvietnam\.github\.io\/portal\//i.test(String(destination||''));}
 
 function resolvePublicLinkApi_(body){
   const code=String(body.public_code||body.code||'').trim().toUpperCase();if(!/^[A-Z2-9]{6,12}$/.test(code))throw new Error('LINK_INVALID');
