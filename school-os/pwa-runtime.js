@@ -8,7 +8,7 @@ function addMeta(name,content){if(document.querySelector(`meta[name="${name}"]`)
 function ensureHead(){
   if(!document.querySelector('link[rel="manifest"]')){const l=document.createElement('link');l.rel='manifest';l.href='manifest.webmanifest';document.head.appendChild(l);}
   if(!document.querySelector('link[rel="icon"]')){const l=document.createElement('link');l.rel='icon';l.href='icon.svg';l.type='image/svg+xml';document.head.appendChild(l);}
-  if(!document.querySelector('link[rel="apple-touch-icon"]')){const l=document.createElement('link');l.rel='apple-touch-icon';l.href='icon.svg';document.head.appendChild(l);}
+  if(!document.querySelector('link[rel="apple-touch-icon"]')){const l=document.createElement('link');l.rel='apple-touch-icon';l.href='apple-touch-icon.png';document.head.appendChild(l);}
   addMeta('theme-color','#f47a2a');
   addMeta('apple-mobile-web-app-capable','yes');
   addMeta('apple-mobile-web-app-status-bar-style','default');
