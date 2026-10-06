@@ -38,7 +38,7 @@
 
   function schoolModal(){return ensureModal('schoolEditForm','Cập nhật trường',`<div class="form">
     <div class="field full"><label>Tên trường</label><input id="esName" disabled></div>
-    <div class="field"><label>Giai đoạn</label><select id="esStatus"><option>0 – Data tiềm năng</option><option>1 – Đã tiếp cận</option><option>2 – Đã trao đổi</option><option>3 – Đang xúc tiến triển khai</option></select></div>
+    <div class="field"><label>Giai đoạn</label><select id="esStatus"><option value="0 – Data tiềm năng">0 – Dữ liệu tiềm năng</option><option>1 – Đã tiếp cận</option><option>2 – Đã trao đổi</option><option>3 – Đang xúc tiến triển khai</option></select></div>
     <div class="field"><label>Phụ trách</label><select id="esOwner"></select></div>
     <div class="field full"><label>Bước tiếp theo</label><input id="esAction"><div class="form-note">Ghi việc cụ thể cần làm tiếp với trường.</div></div>
     <div class="field"><label>Ngày làm lại</label><input id="esDate" type="date"></div>
