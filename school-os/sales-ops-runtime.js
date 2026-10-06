@@ -39,7 +39,7 @@ function renderTodaySimple(){
   const schools=st().schools||[],tasks=(st().tasks||[]).filter(t=>!t.done),opps=st().opps||[];
   const overdue=tasks.filter(t=>dueState(t.due)==='overdue');
   const today=tasks.filter(t=>dueState(t.due)==='today');
-  const risky=schools.filter(s=>String(s.risk||'')==='Rủi ro');
+  const risky=schools.filter(s=>['Rủi ro','Cao'].includes(String(s.risk||'')));
   const follow=schools.filter(s=>s.date&&['overdue','today'].includes(dueState(s.date)));
 
   const cards=$('today')?.querySelectorAll('.kpi');
@@ -65,8 +65,8 @@ function renderTodaySimple(){
 
   const ranked=[...schools].sort((a,b)=>{
     const da=dayKey(a.date)||'9999-99-99',db=dayKey(b.date)||'9999-99-99';
-    const ra=a.risk==='Rủi ro'?0:a.risk==='Cần chú ý'?1:2;
-    const rb=b.risk==='Rủi ro'?0:b.risk==='Cần chú ý'?1:2;
+    const ra=['Rủi ro','Cao'].includes(a.risk)?0:a.risk==='Cần chú ý'?1:2;
+    const rb=['Rủi ro','Cao'].includes(b.risk)?0:b.risk==='Cần chú ý'?1:2;
     return da.localeCompare(db)||ra-rb;
   }).slice(0,8);
   if($('priority'))$('priority').innerHTML=ranked.map(s=>'<div class="item" onclick="openSchool(\''+esc(s.id)+'\')"><div class="dot '+(s.risk==='Rủi ro'?'risk':s.risk==='Cần chú ý'?'warn':'good')+'"></div><div class="grow"><b>'+esc(s.name)+'</b><small>'+esc(s.action||'Chưa có bước tiếp theo')+'</small></div><span class="tag">'+esc(s.date||'Chưa đặt ngày')+'</span></div>').join('');
@@ -154,19 +154,21 @@ function ensureSalesDashboard(){
       '<div><div style="display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:10px">'+stats.map(x=>'<button class="stage-filter btn" data-stage="'+esc(x.key)+'" style="text-align:left;justify-content:flex-start;padding:12px"><span style="width:10px;height:10px;border-radius:50%;background:'+x.color+';display:inline-block;margin-right:8px"></span><b>'+x.short+' · '+x.n+'</b><span style="margin-left:auto;color:#69717d">'+Math.round(x.p)+'%</span><small style="display:block;width:100%;margin-left:18px;color:#69717d">'+x.label+'</small></button>').join('')+'</div>'+
       '<div class="recommend" style="margin-top:12px"><b>'+noDate+' trường chưa có ngày làm lại</b><p>Đây là nhóm dễ bị bỏ quên. Khi sale trao đổi, chỉ cần ghi kết quả, bước tiếp theo và đặt ngày theo dõi.</p><div class="quick" style="margin-top:8px"><button class="btn small" id="showNoDate">Xem chưa đặt ngày</button><button class="btn small" id="showDueNow">Xem đến hạn / quá hạn ('+dueNow+')</button></div></div></div>'+
     '</div>';
-  dash.querySelectorAll('.stage-filter').forEach(b=>b.onclick=()=>{if($('fs'))$('fs').value=b.dataset.stage;go('schools');renderSchoolsSimple();});
+  dash.querySelectorAll('.stage-filter').forEach(b=>b.onclick=()=>{schoolListMode='all';if($('fs'))$('fs').value=b.dataset.stage;go('schools');renderSchoolsSimple();});
   const reset=dash.querySelector('#resetSchoolFilters');if(reset)reset.onclick=()=>{schoolListMode='all';if($('fr'))$('fr').value='';if($('fs'))$('fs').value='';if($('fk'))$('fk').value='';if($('q'))$('q').value='';go('schools');renderSchoolsSimple();};
   const noDateBtn=dash.querySelector('#showNoDate');if(noDateBtn)noDateBtn.onclick=()=>{schoolListMode='nodate';go('schools');renderSchoolsSimple();};
   const dueBtn=dash.querySelector('#showDueNow');if(dueBtn)dueBtn.onclick=()=>{schoolListMode='due';go('schools');renderSchoolsSimple();};
 }
 
 function simplifyDrawer(){
+  const s=st().schools.find(x=>x.id===window.current);if(!s)return;
+  const meta=$('dMeta');if(meta)meta.innerHTML='<span class="tag brand">'+esc(s.status||'Chưa xác định')+'</span><span class="tag">'+esc(s.region||'')+'</span><span class="tag">'+esc(s.owner||'')+'</span>';
   if(window.currentTab!=='overview')return;
   const body=$('dBody');if(!body)return;
   const grid=body.querySelector('.infogrid');if(grid)grid.remove();
   const next=body.querySelector('.next');if(next){
-    const s=st().schools.find(x=>x.id===window.current);
-    if(s){const label=next.querySelector('label');if(label)label.textContent='Bước tiếp theo';const muted=next.querySelector('.muted');if(muted)muted.textContent='Giai đoạn: '+(s.status||'Chưa xác định')+' · Phụ trách: '+(s.owner||'')+(s.date?' · Làm lại: '+s.date:'');}
+    const label=next.querySelector('label');if(label)label.textContent='Bước tiếp theo';
+    const muted=next.querySelector('.muted');if(muted)muted.textContent='Phụ trách: '+(s.owner||'')+(s.date?' · Làm lại: '+s.date:'');
   }
 }
 
