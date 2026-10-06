@@ -6,6 +6,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;'
 const st=()=>window.state||{schools:[],tasks:[],opps:[]};
 const me=()=>window.SchoolOsBackend?.currentUser?.()||null;
 const isManager=()=>['SUPER_ADMIN','ADMIN','LEADER'].includes(String(me()?.role||'').toUpperCase());
+let schoolListMode='all';
 
 function isoToday(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
 function parseDate(v){
@@ -99,6 +100,8 @@ function simplifySchoolList(){
 function renderSchoolsSimple(){
   const q=($('q')?.value||'').toLowerCase(),r=$('fr')?.value||'',stage=$('fs')?.value||'',owner=$('fk')?.value||'';
   let list=(st().schools||[]).filter(s=>(!q||JSON.stringify(s).toLowerCase().includes(q))&&(!r||s.region===r)&&(!stage||s.status===stage)&&(!owner||s.owner===owner));
+  if(schoolListMode==='nodate')list=list.filter(s=>!String(s.date||'').trim());
+  if(schoolListMode==='due')list=list.filter(s=>['overdue','today'].includes(dueState(s.date)));
   const body=$('schoolRows');if(!body)return;
   body.innerHTML=list.map(s=>`<tr><td><div class="name">${esc(s.name)}</div></td><td>${esc(s.region)}</td><td><span class="tag brand">${esc(s.status||'Chưa xác định')}</span></td><td><div class="owner"><div class="mini">${esc((s.owner||'?')[0])}</div>${esc(s.owner||'')}</div></td><td><b>${esc(s.action||'Chưa có bước tiếp theo')}</b></td><td>${esc(s.date||'Chưa đặt')}</td><td><button class="rowbtn" onclick="openSchool('${esc(s.id)}')">Mở</button></td></tr>`).join('')||'<tr><td colspan="7" class="empty">Không có trường phù hợp.</td></tr>';
 }
@@ -144,14 +147,17 @@ function ensureSalesDashboard(){
   const stats=defs.map(d=>{const n=schools.filter(s=>s.status===d.key).length,p=n/total*100,start=acc;acc+=p;return {...d,n,p,start,end:acc};});
   const gradient=stats.map(x=>x.color+' '+x.start.toFixed(2)+'% '+x.end.toFixed(2)+'%').join(',');
   const noDate=schools.filter(s=>!String(s.date||'').trim()).length;
+  const dueNow=schools.filter(s=>s.date&&['overdue','today'].includes(dueState(s.date))).length;
   dash.innerHTML='<div class="sectionhead"><div><h3>Trạng thái phát triển trường</h3><small>'+schools.length+' trường trong phạm vi tài khoản hiện tại</small></div><button class="btn small" id="resetSchoolFilters">Xem tất cả trường</button></div>'+
     '<div style="display:grid;grid-template-columns:minmax(180px,240px) 1fr;gap:24px;align-items:center">'+
       '<div style="display:flex;justify-content:center"><div style="width:190px;height:190px;border-radius:50%;background:conic-gradient('+gradient+');position:relative"><div style="position:absolute;inset:38px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column"><b style="font-size:30px">'+schools.length+'</b><small>trường</small></div></div></div>'+
       '<div><div style="display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:10px">'+stats.map(x=>'<button class="stage-filter btn" data-stage="'+esc(x.key)+'" style="text-align:left;justify-content:flex-start;padding:12px"><span style="width:10px;height:10px;border-radius:50%;background:'+x.color+';display:inline-block;margin-right:8px"></span><b>'+x.short+' · '+x.n+'</b><span style="margin-left:auto;color:#69717d">'+Math.round(x.p)+'%</span><small style="display:block;width:100%;margin-left:18px;color:#69717d">'+x.label+'</small></button>').join('')+'</div>'+
-      '<div class="recommend" style="margin-top:12px"><b>'+noDate+' trường chưa có ngày làm lại</b><p>Đây là nhóm dễ bị bỏ quên. Khi sale trao đổi, chỉ cần ghi kết quả, bước tiếp theo và đặt ngày theo dõi.</p></div></div>'+
+      '<div class="recommend" style="margin-top:12px"><b>'+noDate+' trường chưa có ngày làm lại</b><p>Đây là nhóm dễ bị bỏ quên. Khi sale trao đổi, chỉ cần ghi kết quả, bước tiếp theo và đặt ngày theo dõi.</p><div class="quick" style="margin-top:8px"><button class="btn small" id="showNoDate">Xem chưa đặt ngày</button><button class="btn small" id="showDueNow">Xem đến hạn / quá hạn ('+dueNow+')</button></div></div></div>'+
     '</div>';
   dash.querySelectorAll('.stage-filter').forEach(b=>b.onclick=()=>{if($('fs'))$('fs').value=b.dataset.stage;go('schools');renderSchoolsSimple();});
-  const reset=dash.querySelector('#resetSchoolFilters');if(reset)reset.onclick=()=>{if($('fr'))$('fr').value='';if($('fs'))$('fs').value='';if($('fk'))$('fk').value='';if($('q'))$('q').value='';go('schools');renderSchoolsSimple();};
+  const reset=dash.querySelector('#resetSchoolFilters');if(reset)reset.onclick=()=>{schoolListMode='all';if($('fr'))$('fr').value='';if($('fs'))$('fs').value='';if($('fk'))$('fk').value='';if($('q'))$('q').value='';go('schools');renderSchoolsSimple();};
+  const noDateBtn=dash.querySelector('#showNoDate');if(noDateBtn)noDateBtn.onclick=()=>{schoolListMode='nodate';go('schools');renderSchoolsSimple();};
+  const dueBtn=dash.querySelector('#showDueNow');if(dueBtn)dueBtn.onclick=()=>{schoolListMode='due';go('schools');renderSchoolsSimple();};
 }
 
 function simplifyDrawer(){
@@ -214,7 +220,7 @@ function patch(){
 
   simplifySchoolList();simplifySchoolFilters();
   window.renderSchools=renderSchoolsSimple;
-  if($('fr'))$('fr').onchange=renderSchoolsSimple;if($('fs'))$('fs').onchange=renderSchoolsSimple;if($('fk'))$('fk').onchange=renderSchoolsSimple;if($('q'))$('q').oninput=renderSchoolsSimple;
+  if($('fr'))$('fr').onchange=()=>{schoolListMode='all';renderSchoolsSimple();};if($('fs'))$('fs').onchange=()=>{schoolListMode='all';renderSchoolsSimple();};if($('fk'))$('fk').onchange=()=>{schoolListMode='all';renderSchoolsSimple();};if($('q'))$('q').oninput=()=>{schoolListMode='all';renderSchoolsSimple();};
   const drawer0=window.renderDrawer;if(drawer0)window.renderDrawer=function(){const r=drawer0.apply(this,arguments);simplifyDrawer();return r;};
   const refresh0=window.refresh;
   if(refresh0)window.refresh=function(){const r=refresh0.apply(this,arguments);simplifySchoolList();renderSchoolsSimple();renderTodaySimple();return r;};
