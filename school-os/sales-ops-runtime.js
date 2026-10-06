@@ -70,6 +70,7 @@ function renderTodaySimple(){
   }).slice(0,8);
   if($('priority'))$('priority').innerHTML=ranked.map(s=>'<div class="item" onclick="openSchool(\''+esc(s.id)+'\')"><div class="dot '+(s.risk==='Rủi ro'?'risk':s.risk==='Cần chú ý'?'warn':'good')+'"></div><div class="grow"><b>'+esc(s.name)+'</b><small>'+esc(s.action||'Chưa có bước tiếp theo')+'</small></div><span class="tag">'+esc(s.date||'Chưa đặt ngày')+'</span></div>').join('');
 
+  ensureSalesDashboard();
   renderManagerSummary();
 }
 
@@ -96,16 +97,62 @@ function simplifySchoolList(){
   const head=table.querySelector('thead tr');if(head)head.innerHTML='<th>Trường</th><th>Địa bàn</th><th>Giai đoạn</th><th>Phụ trách</th><th>Bước tiếp theo</th><th>Ngày làm lại</th><th></th>';
 }
 function renderSchoolsSimple(){
-  const q=($('q')?.value||'').toLowerCase(),r=$('fr')?.value||'',stage=$('fs')?.value||'';
-  let list=(st().schools||[]).filter(s=>(!q||JSON.stringify(s).toLowerCase().includes(q))&&(!r||s.region===r)&&(!stage||s.status===stage));
+  const q=($('q')?.value||'').toLowerCase(),r=$('fr')?.value||'',stage=$('fs')?.value||'',owner=$('fk')?.value||'';
+  let list=(st().schools||[]).filter(s=>(!q||JSON.stringify(s).toLowerCase().includes(q))&&(!r||s.region===r)&&(!stage||s.status===stage)&&(!owner||s.owner===owner));
   const body=$('schoolRows');if(!body)return;
   body.innerHTML=list.map(s=>`<tr><td><div class="name">${esc(s.name)}</div></td><td>${esc(s.region)}</td><td><span class="tag brand">${esc(s.status||'Chưa xác định')}</span></td><td><div class="owner"><div class="mini">${esc((s.owner||'?')[0])}</div>${esc(s.owner||'')}</div></td><td><b>${esc(s.action||'Chưa có bước tiếp theo')}</b></td><td>${esc(s.date||'Chưa đặt')}</td><td><button class="rowbtn" onclick="openSchool('${esc(s.id)}')">Mở</button></td></tr>`).join('')||'<tr><td colspan="7" class="empty">Không có trường phù hợp.</td></tr>';
 }
 function simplifySchoolFilters(){
-  const fs=$('fs');if(fs){const vals=['','0 – Data tiềm năng','1 – Đã tiếp cận','2 – Đã trao đổi','3 – Đang xúc tiến triển khai'];fs.innerHTML=vals.map(v=>'<option value="'+esc(v)+'">'+(v||'Tất cả giai đoạn')+'</option>').join('');}
-  const fk=$('fk');if(fk)fk.style.display='none';
+  const schools=st().schools||[];
+  const fr=$('fr');if(fr){
+    const current=fr.value;
+    const vals=['',...new Set(schools.map(s=>String(s.region||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+    fr.innerHTML=vals.map(v=>'<option value="'+esc(v)+'">'+(v||'Tất cả địa bàn')+'</option>').join('');
+    if(vals.includes(current))fr.value=current;
+  }
+  const fs=$('fs');if(fs){
+    const current=fs.value;
+    const vals=['','0 – Data tiềm năng','1 – Đã tiếp cận','2 – Đã trao đổi','3 – Đang xúc tiến triển khai'];
+    fs.innerHTML=vals.map(v=>'<option value="'+esc(v)+'">'+(v||'Tất cả giai đoạn')+'</option>').join('');
+    if(vals.includes(current))fs.value=current;
+  }
+  const fk=$('fk');if(fk){
+    const current=fk.value;
+    const vals=['',...new Set(schools.map(s=>String(s.owner||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+    fk.innerHTML=vals.map(v=>'<option value="'+esc(v)+'">'+(v||'Tất cả phụ trách')+'</option>').join('');
+    fk.style.display='';
+    if(vals.includes(current))fk.value=current;
+  }
 }
 
+
+function ensureSalesDashboard(){
+  const today=$('today');if(!today)return;
+  let dash=$('salesStageDashboard');
+  if(!dash){
+    dash=document.createElement('div');dash.id='salesStageDashboard';dash.className='card section';
+    const grid=today.querySelector('.grid');if(grid)today.insertBefore(dash,grid);else today.appendChild(dash);
+  }
+  const schools=st().schools||[],total=schools.length||1;
+  const defs=[
+    {key:'0 – Data tiềm năng',short:'M0',label:'Data tiềm năng',color:'#B8BDC6'},
+    {key:'1 – Đã tiếp cận',short:'M1',label:'Đã tiếp cận',color:'#F6B26B'},
+    {key:'2 – Đã trao đổi',short:'M2',label:'Đã trao đổi',color:'#F47A2A'},
+    {key:'3 – Đang xúc tiến triển khai',short:'M3',label:'Đang xúc tiến',color:'#C95712'}
+  ];
+  let acc=0;
+  const stats=defs.map(d=>{const n=schools.filter(s=>s.status===d.key).length,p=n/total*100,start=acc;acc+=p;return {...d,n,p,start,end:acc};});
+  const gradient=stats.map(x=>x.color+' '+x.start.toFixed(2)+'% '+x.end.toFixed(2)+'%').join(',');
+  const noDate=schools.filter(s=>!String(s.date||'').trim()).length;
+  dash.innerHTML='<div class="sectionhead"><div><h3>Trạng thái phát triển trường</h3><small>'+schools.length+' trường trong phạm vi tài khoản hiện tại</small></div><button class="btn small" id="resetSchoolFilters">Xem tất cả trường</button></div>'+
+    '<div style="display:grid;grid-template-columns:minmax(180px,240px) 1fr;gap:24px;align-items:center">'+
+      '<div style="display:flex;justify-content:center"><div style="width:190px;height:190px;border-radius:50%;background:conic-gradient('+gradient+');position:relative"><div style="position:absolute;inset:38px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column"><b style="font-size:30px">'+schools.length+'</b><small>trường</small></div></div></div>'+
+      '<div><div style="display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:10px">'+stats.map(x=>'<button class="stage-filter btn" data-stage="'+esc(x.key)+'" style="text-align:left;justify-content:flex-start;padding:12px"><span style="width:10px;height:10px;border-radius:50%;background:'+x.color+';display:inline-block;margin-right:8px"></span><b>'+x.short+' · '+x.n+'</b><span style="margin-left:auto;color:#69717d">'+Math.round(x.p)+'%</span><small style="display:block;width:100%;margin-left:18px;color:#69717d">'+x.label+'</small></button>').join('')+'</div>'+
+      '<div class="recommend" style="margin-top:12px"><b>'+noDate+' trường chưa có ngày làm lại</b><p>Đây là nhóm dễ bị bỏ quên. Khi sale trao đổi, chỉ cần ghi kết quả, bước tiếp theo và đặt ngày theo dõi.</p></div></div>'+
+    '</div>';
+  dash.querySelectorAll('.stage-filter').forEach(b=>b.onclick=()=>{if($('fs'))$('fs').value=b.dataset.stage;go('schools');renderSchoolsSimple();});
+  const reset=dash.querySelector('#resetSchoolFilters');if(reset)reset.onclick=()=>{if($('fr'))$('fr').value='';if($('fs'))$('fs').value='';if($('fk'))$('fk').value='';if($('q'))$('q').value='';go('schools');renderSchoolsSimple();};
+}
 
 function simplifyDrawer(){
   if(window.currentTab!=='overview')return;
@@ -167,7 +214,7 @@ function patch(){
 
   simplifySchoolList();simplifySchoolFilters();
   window.renderSchools=renderSchoolsSimple;
-  if($('fr'))$('fr').onchange=renderSchoolsSimple;if($('fs'))$('fs').onchange=renderSchoolsSimple;if($('q'))$('q').oninput=renderSchoolsSimple;
+  if($('fr'))$('fr').onchange=renderSchoolsSimple;if($('fs'))$('fs').onchange=renderSchoolsSimple;if($('fk'))$('fk').onchange=renderSchoolsSimple;if($('q'))$('q').oninput=renderSchoolsSimple;
   const drawer0=window.renderDrawer;if(drawer0)window.renderDrawer=function(){const r=drawer0.apply(this,arguments);simplifyDrawer();return r;};
   const refresh0=window.refresh;
   if(refresh0)window.refresh=function(){const r=refresh0.apply(this,arguments);simplifySchoolList();renderSchoolsSimple();renderTodaySimple();return r;};
