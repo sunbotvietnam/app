@@ -90,6 +90,22 @@ function renderManagerSummary(){
   box.innerHTML='<div class="sectionhead"><h3>Nhịp làm việc theo phụ trách</h3><small>Quản lý</small></div>'+rows;
 }
 
+
+function simplifySchoolList(){
+  const table=$('schools')?.querySelector('table');if(!table)return;
+  const head=table.querySelector('thead tr');if(head)head.innerHTML='<th>Trường</th><th>Địa bàn</th><th>Giai đoạn</th><th>Phụ trách</th><th>Bước tiếp theo</th><th>Ngày làm lại</th><th></th>';
+}
+function renderSchoolsSimple(){
+  const q=($('q')?.value||'').toLowerCase(),r=$('fr')?.value||'',stage=$('fs')?.value||'';
+  let list=(st().schools||[]).filter(s=>(!q||JSON.stringify(s).toLowerCase().includes(q))&&(!r||s.region===r)&&(!stage||s.status===stage));
+  const body=$('schoolRows');if(!body)return;
+  body.innerHTML=list.map(s=>'<tr><td><div class="name">'+esc(s.name)+'</div></td><td>'+esc(s.region)+'</td><td><span class="tag brand">'+esc(s.status||'Chưa xác định')+'</span></td><td><div class="owner"><div class="mini">'+esc((s.owner||'?')[0])+'</div>'+esc(s.owner||'')+'</div></td><td><b>'+esc(s.action||'Chưa có bước tiếp theo')+'</b></td><td>'+esc(s.date||'Chưa đặt')+'</td><td><button class="rowbtn" onclick="openSchool(\\''+esc(s.id)+'\\')">Mở</button></td></tr>').join('')||'<tr><td colspan="7" class="empty">Không có trường phù hợp.</td></tr>';
+}
+function simplifySchoolFilters(){
+  const fs=$('fs');if(fs){const vals=['','0 – Data tiềm năng','1 – Đã tiếp cận','2 – Đã trao đổi','3 – Đang xúc tiến triển khai'];fs.innerHTML=vals.map(v=>'<option value="'+esc(v)+'">'+(v||'Tất cả giai đoạn')+'</option>').join('');}
+  const fk=$('fk');if(fk)fk.style.display='none';
+}
+
 function patch(){
   ensureInteractionFields();
 
@@ -138,11 +154,14 @@ function patch(){
     return out;
   };
 
+  simplifySchoolList();simplifySchoolFilters();
+  window.renderSchools=renderSchoolsSimple;
+  if($('fr'))$('fr').onchange=renderSchoolsSimple;if($('fs'))$('fs').onchange=renderSchoolsSimple;if($('q'))$('q').oninput=renderSchoolsSimple;
   const refresh0=window.refresh;
-  if(refresh0)window.refresh=function(){const r=refresh0.apply(this,arguments);renderTodaySimple();return r;};
+  if(refresh0)window.refresh=function(){const r=refresh0.apply(this,arguments);simplifySchoolList();renderSchoolsSimple();renderTodaySimple();return r;};
 }
 
-function init(){patch();renderTodaySimple();}
+function init(){patch();simplifySchoolList();simplifySchoolFilters();renderSchoolsSimple();renderTodaySimple();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 window.SchoolOsSalesOps={render:renderTodaySimple};
 })();
