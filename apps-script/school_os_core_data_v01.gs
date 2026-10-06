@@ -11,23 +11,27 @@ function ensureCoreMeta_() {
 function getCoreStateApi_() {
   ensureCoreMeta_();
   const version = Number(getMetaValue_('CORE_STATE_VERSION') || 0);
-  const schools = sheetObjects_(SCHOOL_OS.SHEETS.SCHOOLS).map(r => ({
+  const schoolsSource = (typeof activeObjects_ === 'function') ? activeObjects_(SCHOOL_OS.SHEETS.SCHOOLS) : sheetObjects_(SCHOOL_OS.SHEETS.SCHOOLS).filter(r => !r.deleted_at);
+  const schools = schoolsSource.map(r => ({
     id:String(r.school_id),name:String(r.school_name),region:String(r.region),type:String(r.school_type),
     status:String(r.status),owner:String(r.owner),action:String(r.next_action),date:String(r.next_action_date),
     risk:String(r.risk),source:String(r.source),children:r.children,steam:String(r.steam_status),
     policy:String(r.policy_status),renewal:String(r.renewal_date),contacts:[],events:[]
   }));
   const byId = schools.reduce((o,s)=>(o[s.id]=s,o),{});
-  sheetObjects_(SCHOOL_OS.SHEETS.CONTACTS).forEach(r => {
+  const contactsSource = (typeof activeObjects_ === 'function') ? activeObjects_(SCHOOL_OS.SHEETS.CONTACTS) : sheetObjects_(SCHOOL_OS.SHEETS.CONTACTS).filter(r => !r.deleted_at);
+  contactsSource.forEach(r => {
     const s=byId[String(r.school_id)]; if(!s) return;
     s.contacts.push({id:String(r.contact_id),name:String(r.name),role:String(r.role),decision:String(r.decision_role),
       email:String(r.email),phone:String(r.phone),sentiment:String(r.sentiment)});
   });
-  const tasks = sheetObjects_(SCHOOL_OS.SHEETS.TASKS).map(r => ({
+  const tasksSource = (typeof activeObjects_ === 'function') ? activeObjects_(SCHOOL_OS.SHEETS.TASKS) : sheetObjects_(SCHOOL_OS.SHEETS.TASKS).filter(r => !r.deleted_at);
+  const tasks = tasksSource.map(r => ({
     id:String(r.task_id),title:String(r.title),school:String(r.school_name),school_id:String(r.school_id),
     owner:String(r.owner),due:String(r.due),risk:String(r.risk),done:String(r.done).toUpperCase()==='TRUE'||r.done===true
   }));
-  const opps = sheetObjects_(SCHOOL_OS.SHEETS.OPPORTUNITIES).map(r => ({
+  const oppsSource = (typeof activeObjects_ === 'function') ? activeObjects_(SCHOOL_OS.SHEETS.OPPORTUNITIES) : sheetObjects_(SCHOOL_OS.SHEETS.OPPORTUNITIES).filter(r => !r.deleted_at);
+  const opps = oppsSource.map(r => ({
     id:String(r.opportunity_id),school:String(r.school_name),school_id:String(r.school_id),stage:String(r.stage),
     title:String(r.title),owner:String(r.owner),value:Number(r.value||0),fit:Number(r.fit||0),need:Number(r.need||0),
     authority:Number(r.authority||0),funding:Number(r.funding||0),timing:Number(r.timing||0),
@@ -37,6 +41,10 @@ function getCoreStateApi_() {
 }
 
 function saveCoreStateApi_(body) {
+  const allowLegacyWrite = (typeof governanceControlValue_ === 'function') ? governanceControlValue_('ALLOW_LEGACY_CORE_STATE_SAVE', false) : false;
+  if (!allowLegacyWrite) {
+    throw new Error('LEGACY_CORE_STATE_WRITE_DISABLED: dùng list_core_records + record APIs; không được replace toàn bộ core state.');
+  }
   const lock=LockService.getScriptLock();
   lock.waitLock(15000);
   try {
