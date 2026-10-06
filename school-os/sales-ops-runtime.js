@@ -20,6 +20,16 @@ function dayKey(v){const d=parseDate(v);if(!d)return'';return [d.getFullYear(),S
 function dueState(v){const k=dayKey(v),today=isoToday();if(!k)return'none';return k<today?'overdue':k===today?'today':'future';}
 function taskSchool(t){return st().schools.find(s=>s.id===t.school_id||s.name===t.school)||null;}
 
+function simplifyPageChrome(){
+  const todayHead=$('today')?.querySelector('.head');
+  const schoolsHead=$('schools')?.querySelector('.head');
+  [todayHead,schoolsHead].forEach(h=>{const b=h?.querySelector('button[onclick*="openSchoolForm"]');if(b)b.style.display='none';});
+  const todayText=todayHead?.querySelector('p');if(todayText)todayText.textContent='Xem nhanh trường cần theo dõi và việc cần làm.';
+  const schoolsText=schoolsHead?.querySelector('p');if(schoolsText)schoolsText.textContent='Danh sách trường theo giai đoạn, người phụ trách và bước tiếp theo.';
+  const taskText=$('tasks')?.querySelector('.head p');if(taskText)taskText.textContent='Danh sách việc cần làm và thời hạn xử lý.';
+  const oppText=$('opps')?.querySelector('.head p');if(oppText)oppText.textContent='Các cơ hội đang được theo dõi theo từng trường.';
+}
+
 function ensureInteractionFields(){
   const form=$('interactionForm')?.querySelector('.form');if(!form||$('ifollow'))return;
   const action=$('ia')?.closest('.field');if(!action)return;
@@ -225,10 +235,10 @@ function patch(){
   if($('fr'))$('fr').onchange=()=>{schoolListMode='all';renderSchoolsSimple();};if($('fs'))$('fs').onchange=()=>{schoolListMode='all';renderSchoolsSimple();};if($('fk'))$('fk').onchange=()=>{schoolListMode='all';renderSchoolsSimple();};if($('q'))$('q').oninput=()=>{schoolListMode='all';renderSchoolsSimple();};
   const drawer0=window.renderDrawer;if(drawer0)window.renderDrawer=function(){const r=drawer0.apply(this,arguments);simplifyDrawer();return r;};
   const refresh0=window.refresh;
-  if(refresh0)window.refresh=function(){const r=refresh0.apply(this,arguments);simplifySchoolList();renderSchoolsSimple();renderTodaySimple();return r;};
+  if(refresh0)window.refresh=function(){const r=refresh0.apply(this,arguments);simplifyPageChrome();simplifySchoolList();renderSchoolsSimple();renderTodaySimple();return r;};
 }
 
-function init(){patch();simplifySchoolList();simplifySchoolFilters();renderSchoolsSimple();renderTodaySimple();}
+function init(){patch();simplifyPageChrome();simplifySchoolList();simplifySchoolFilters();renderSchoolsSimple();renderTodaySimple();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 window.SchoolOsSalesOps={render:renderTodaySimple};
 })();
