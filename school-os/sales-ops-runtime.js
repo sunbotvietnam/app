@@ -99,7 +99,7 @@ function renderSchoolsSimple(){
   const q=($('q')?.value||'').toLowerCase(),r=$('fr')?.value||'',stage=$('fs')?.value||'';
   let list=(st().schools||[]).filter(s=>(!q||JSON.stringify(s).toLowerCase().includes(q))&&(!r||s.region===r)&&(!stage||s.status===stage));
   const body=$('schoolRows');if(!body)return;
-  body.innerHTML=list.map(s=>'<tr><td><div class="name">'+esc(s.name)+'</div></td><td>'+esc(s.region)+'</td><td><span class="tag brand">'+esc(s.status||'Chưa xác định')+'</span></td><td><div class="owner"><div class="mini">'+esc((s.owner||'?')[0])+'</div>'+esc(s.owner||'')+'</div></td><td><b>'+esc(s.action||'Chưa có bước tiếp theo')+'</b></td><td>'+esc(s.date||'Chưa đặt')+'</td><td><button class="rowbtn" onclick="openSchool(\\''+esc(s.id)+'\\')">Mở</button></td></tr>').join('')||'<tr><td colspan="7" class="empty">Không có trường phù hợp.</td></tr>';
+  body.innerHTML=list.map(s=>`<tr><td><div class="name">${esc(s.name)}</div></td><td>${esc(s.region)}</td><td><span class="tag brand">${esc(s.status||'Chưa xác định')}</span></td><td><div class="owner"><div class="mini">${esc((s.owner||'?')[0])}</div>${esc(s.owner||'')}</div></td><td><b>${esc(s.action||'Chưa có bước tiếp theo')}</b></td><td>${esc(s.date||'Chưa đặt')}</td><td><button class="rowbtn" onclick="openSchool('${esc(s.id)}')">Mở</button></td></tr>`).join('')||'<tr><td colspan="7" class="empty">Không có trường phù hợp.</td></tr>';
 }
 function simplifySchoolFilters(){
   const fs=$('fs');if(fs){const vals=['','0 – Data tiềm năng','1 – Đã tiếp cận','2 – Đã trao đổi','3 – Đang xúc tiến triển khai'];fs.innerHTML=vals.map(v=>'<option value="'+esc(v)+'">'+(v||'Tất cả giai đoạn')+'</option>').join('');}
