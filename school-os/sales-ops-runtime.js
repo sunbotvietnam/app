@@ -6,6 +6,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;'
 const st=()=>window.state||{schools:[],tasks:[],opps:[]};
 const me=()=>window.SchoolOsBackend?.currentUser?.()||null;
 const isManager=()=>['SUPER_ADMIN','ADMIN','LEADER'].includes(String(me()?.role||'').toUpperCase());
+const schemaReady=()=>st().schools.some(s=>Object.prototype.hasOwnProperty.call(s,'funnel'));
 function isoToday(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
 function parseDate(v){
   const s=String(v||'').trim();let m;
@@ -36,6 +37,8 @@ function ensureInteractionFields(){
   const note=document.createElement('div');note.className='form-note';note.style.gridColumn='1/-1';note.textContent='Bắt buộc 4 thông tin: kết quả, mức xúc tiến, bước tiếp theo và ngày cần làm lại.';form.prepend(note);
 }
 function renderOpsToday(){
+  if(!schemaReady())return;
+  ensureInteractionFields();
   const schools=st().schools,tasks=st().tasks.filter(t=>!t.done),opps=st().opps;
   const overdue=tasks.filter(t=>dueState(t.due)==='overdue'),today=tasks.filter(t=>dueState(t.due)==='today');
   const waiting=schools.filter(s=>/chưa phản hồi|chờ bước tiếp theo/i.test(String(s.contact_status||'')));
@@ -77,12 +80,14 @@ function patch(){
   const open0=window.openInteraction;
   if(open0)window.openInteraction=function(){
     const r=open0.apply(this,arguments),s=st().schools.find(x=>x.id===window.current);
-    if(s){$('ifunnel').value=funnelLabel(s.funnel);$('ifollow').value=dayKey(s.date)||isoToday();}
+    if(schemaReady())ensureInteractionFields();
+    if(s&&$('ifunnel')){$('ifunnel').value=funnelLabel(s.funnel);$('ifollow').value=dayKey(s.date)||isoToday();}
     return r;
   };
   const save0=window.saveInteraction;
   if(save0)window.saveInteraction=async function(){
     const s=st().schools.find(x=>x.id===window.current);if(!s)return;
+    if(!schemaReady()||!$('ifunnel'))return save0.apply(this,arguments);
     const result=$('ir')?.value.trim(),action=$('ia')?.value.trim(),follow=$('ifollow')?.value,funnel=$('ifunnel')?.value;
     if(!result)return window.toast?.('Cần ghi kết quả trao đổi');
     if(!funnel)return window.toast?.('Cần chọn mức xúc tiến');
