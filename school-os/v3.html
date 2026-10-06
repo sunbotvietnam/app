@@ -59,7 +59,7 @@
 
 <section class="page" id="opps"><div class="head"><div><h1>Cơ hội</h1><p>Điểm chất lượng được tính tự động; sale không cần tự “ước lượng % chốt”.</p></div><button class="btn primary" onclick="openOppForm()">Tạo cơ hội</button></div><div class="kanban" id="kanban"></div></section>
 
-<section class="page manager-only" id="performance"><div class="head"><div><h1>Hiệu suất bán hàng</h1><p>Tách nỗ lực, kỷ luật, chất lượng và kết quả để tránh KPI “gọi cho đủ số”.</p></div></div><div class="people" id="peoplePerf"></div></section>
+<section class="page manager-only" id="performance"><div class="head"><div><h1>Hiệu suất bán hàng</h1><p>Tách nỗ lực, kỷ luật, chất lượng và kết quả để tránh chỉ tiêu “gọi cho đủ số”.</p></div></div><div class="people" id="peoplePerf"></div></section>
 
 <section class="page manager-only" id="forecast"><div class="head"><div><h1>Dự báo & gia hạn</h1><p>Nhìn doanh thu tiềm năng, cơ hội cũ và các trường cần gia hạn trước khi quá muộn.</p></div></div><div class="grid"><div class="card section"><div class="sectionhead"><h3>Giá trị cơ hội dự kiến</h3><small>Theo mức độ tiến triển</small></div><div id="forecastList"></div></div><div class="card section"><div class="sectionhead"><h3>Gia hạn sắp tới</h3><small>60–90 ngày</small></div><div id="renewList"></div></div></div></section>
 
@@ -86,7 +86,7 @@
 
 <script>
 const seedSchools=[
-{id:'SCH-HN-001',name:'MN B Hà Nội',region:'Hà Nội',type:'Công lập',status:'Đang triển khai',owner:'Nhung',action:'Chốt kế hoạch năm học 2026–2027',date:'21/08',risk:'Cần chú ý',source:'Quan hệ cũ',children:420,steam:'Đang triển khai Sunbot',policy:'Thuận lợi',renewal:'15/10/2026',contacts:[{name:'Nguyễn Minh',role:'Hiệu trưởng',decision:'Người quyết định',email:'hieutruong@mnb.edu.vn',phone:'0900000001',sentiment:'Ủng hộ'},{name:'Trần Lan',role:'Phó hiệu trưởng',decision:'Người ảnh hưởng',email:'lan@mnb.edu.vn',phone:'0900000002',sentiment:'Ủng hộ'}],events:[{type:'open',title:'Mở Proposal V2',detail:'Link được mở lần 2',at:'21/08 15:17',hot:true},{type:'email',title:'Đã gửi Proposal V2',detail:'Nhung → Nguyễn Minh',at:'21/08 10:14'}]},
+{id:'SCH-HN-001',name:'MN B Hà Nội',region:'Hà Nội',type:'Công lập',status:'Đang triển khai',owner:'Nhung',action:'Chốt kế hoạch năm học 2026–2027',date:'21/08',risk:'Cần chú ý',source:'Quan hệ cũ',children:420,steam:'Đang triển khai Sunbot',policy:'Thuận lợi',renewal:'15/10/2026',contacts:[{name:'Nguyễn Minh',role:'Hiệu trưởng',decision:'Người quyết định',email:'hieutruong@mnb.edu.vn',phone:'0900000001',sentiment:'Ủng hộ'},{name:'Trần Lan',role:'Phó hiệu trưởng',decision:'Người ảnh hưởng',email:'lan@mnb.edu.vn',phone:'0900000002',sentiment:'Ủng hộ'}],events:[{type:'open',title:'Mở phương án V2',detail:'Link được mở lần 2',at:'21/08 15:17',hot:true},{type:'email',title:'Đã gửi phương án V2',detail:'Nhung → Nguyễn Minh',at:'21/08 10:14'}]},
 {id:'SCH-HP-014',name:'MN Thị trấn Gia Lộc',region:'Hải Phòng',type:'Công lập',status:'Đang tiếp cận',owner:'Thu',action:'Gọi trực tiếp sau khi trường xem hồ sơ',date:'21/08',risk:'Rủi ro',source:'Hồ sơ điện tử',children:350,steam:'Chưa xác minh',policy:'Cần xác minh',renewal:'',contacts:[{name:'Ban giám hiệu',role:'BGH',decision:'Chưa xác định',email:'bgh@gialoc.edu.vn',phone:'',sentiment:'Trung lập'}],events:[{type:'open',title:'Mở Hồ sơ Sunbot 2026',detail:'Mở lần đầu sau 42 phút',at:'21/08 11:42',hot:true},{type:'email',title:'Đã gửi hồ sơ điện tử',detail:'Thu → BGH',at:'21/08 11:00'}]},
 {id:'SCH-HN-009',name:'MN Quỳnh Mai',region:'Hà Nội',type:'Công lập',status:'Tiềm năng',owner:'Thu',action:'Xác nhận nhu cầu STEAM thí điểm',date:'22/08',risk:'Cần chú ý',source:'Danh sách thí điểm',children:510,steam:'Có hoạt động STEAM',policy:'Thuận lợi',renewal:'',contacts:[{name:'Lê Phương',role:'PHT chuyên môn',decision:'Người ảnh hưởng',email:'phuong@quynhmai.edu.vn',phone:'',sentiment:'Quan tâm'}],events:[{type:'reply',title:'Trường phản hồi email',detail:'Muốn biết thêm cấu trúc chương trình',at:'20/08 16:20',hot:true}]},
 {id:'SCH-NA-003',name:'MN Nghi Hoa',region:'Nghệ An',type:'Công lập',status:'Tiềm năng',owner:'Dung',action:'Hẹn trao đổi mô hình triển khai mới',date:'24/08',risk:'Bình thường',source:'Quan hệ cũ',children:280,steam:'Chưa xác minh',policy:'Cần xác minh',renewal:'',contacts:[{name:'Hiệu trưởng Nghi Hoa',role:'Hiệu trưởng',decision:'Người quyết định',email:'ht@nghihoa.edu.vn',phone:'',sentiment:'Quan tâm'}],events:[]},
@@ -96,7 +96,7 @@ const seedSchools=[
 const seedTasks=[
 {id:'T1',title:'Gọi MN Thị trấn Gia Lộc sau tín hiệu mở hồ sơ',school:'MN Thị trấn Gia Lộc',due:'21/08',owner:'Thu',risk:'risk',done:false},
 {id:'T2',title:'Chốt agenda họp đầu năm',school:'MN B Hà Nội',due:'21/08',owner:'Nhung',risk:'warn',done:false},
-{id:'T3',title:'Follow-up phản hồi của MN Quỳnh Mai',school:'MN Quỳnh Mai',due:'22/08',owner:'Thu',risk:'warn',done:false},
+{id:'T3',title:'Theo dõi phản hồi của MN Quỳnh Mai',school:'MN Quỳnh Mai',due:'22/08',owner:'Thu',risk:'warn',done:false},
 {id:'T4',title:'Chuẩn bị mô hình hợp tác cụm Nghệ An',school:'MN Nghi Hoa',due:'24/08',owner:'Dung',risk:'',done:false}
 ];
 const seedOpps=[
@@ -118,7 +118,7 @@ document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>go(b.dataset.p
 function hotSignals(){return state.schools.flatMap(s=>(s.events||[]).filter(e=>e.hot).map(e=>({school:s,event:e})))}
 function nextBest(){
  let a=[];
- hotSignals().forEach(x=>a.push({p:0,title:`${x.school.name}: ${x.event.title}`,detail:'Tín hiệu nóng — nên follow-up trong 24 giờ',school:x.school}));
+ hotSignals().forEach(x=>a.push({p:0,title:`${x.school.name}: ${x.event.title}`,detail:'Tín hiệu quan tâm — cần xử lý trong 24 giờ',school:x.school}));
  state.schools.filter(s=>s.risk==='Rủi ro').forEach(s=>a.push({p:1,title:`${s.name}: ${s.action}`,detail:`Rủi ro cao · phụ trách ${s.owner}`,school:s}));
  state.tasks.filter(t=>!t.done&&t.risk).forEach(t=>{let s=state.schools.find(x=>x.name===t.school);if(s)a.push({p:2,title:t.title,detail:`${t.owner} · hạn ${t.due}`,school:s})});
  return a.sort((x,y)=>x.p-y.p).slice(0,6)
@@ -151,15 +151,14 @@ function renderForecast(){
  $('renewList').innerHTML=r.map(s=>`<div class="item"><div class="dot warn"></div><div class="grow"><b>${esc(s.name)}</b><small>Gia hạn dự kiến ${esc(s.renewal)} · ${esc(s.owner)}</small></div><button class="btn small" onclick="openSchool('${s.id}')">Mở</button></div>`).join('')||'<div class="empty">Chưa có trường cần gia hạn.</div>'
 }
 function openByName(n){let s=state.schools.find(x=>x.name===n);if(s)openSchool(s.id)}
-function openSchool(id){current=id;currentTab='overview';let s=state.schools.find(x=>x.id===id);$('dTitle').textContent=s.name;$('dMeta').innerHTML=statusTag(s.status)+riskTag(s.risk)+`<span class="tag">${esc(s.region)}</span><span class="tag blue">${esc(s.source)}</span>`;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('active',x.dataset.tab==='overview'));renderDrawer();$('drawer').classList.add('open')}
+function openSchool(id){current=id;currentTab='overview';let s=state.schools.find(x=>x.id===id);$('dTitle').textContent=s.name;$('dMeta').innerHTML=statusTag(s.status)+`<span class="tag">${esc(s.region)}</span><span class="tag">${esc(s.owner||'')}</span>`;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('active',x.dataset.tab==='overview'));renderDrawer();$('drawer').classList.add('open')}
 function closeDrawer(){$('drawer').classList.remove('open')}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{currentTab=b.dataset.tab;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('active',x===b));renderDrawer()});
 function renderDrawer(){
  let s=state.schools.find(x=>x.id===current);if(!s)return;let relTasks=state.tasks.filter(x=>x.school===s.name),relOpps=state.opps.filter(x=>x.school===s.name);
  if(currentTab==='overview'){
   let sc=relOpps.length?Math.max(...relOpps.map(oppScore)):0;
-  $('dBody').innerHTML=`<div class="next"><label>Bước tiếp theo</label><b>${esc(s.action)}</b><div class="muted">Hạn ${esc(s.date)} · ${esc(s.owner)}</div><div class="quick"><button class="btn primary small" onclick="openInteraction()">Ghi nhận tương tác</button><button class="btn small" onclick="openEmail()">Gửi email</button><button class="btn small" onclick="quickTask()">Tạo việc</button></div></div>
-  <div class="infogrid"><div class="info"><label>Loại trường</label><b>${esc(s.type)}</b></div><div class="info"><label>Quy mô trẻ</label><b>${esc(s.children||'Chưa rõ')}</b></div><div class="info"><label>STEAM hiện tại</label><b>${esc(s.steam)}</b></div><div class="info"><label>Cơ chế địa phương</label><b>${esc(s.policy)}</b></div><div class="info"><label>Nguồn cơ hội</label><b>${esc(s.source)}</b></div><div class="info"><label>Chất lượng cơ hội tốt nhất</label><b>${sc?sc+'%':'Chưa có cơ hội'}</b></div></div>`;
+  $('dBody').innerHTML=`<div class="next"><label>Bước tiếp theo</label><b>${esc(s.action||'Chưa có bước tiếp theo')}</b><div class="muted">${s.date?'Ngày làm lại '+esc(s.date)+' · ':''}${esc(s.owner||'')}</div><div class="quick"><button class="btn primary small" onclick="openInteraction()">Cập nhật sau trao đổi</button><button class="btn small" onclick="openEmail()">Gửi email</button><button class="btn small" onclick="quickTask()">Tạo việc</button></div></div>`;
  } else if(currentTab==='people'){
   $('dBody').innerHTML=`<div class="sectionhead"><h3>Người liên hệ & vai trò quyết định</h3><button class="btn small" onclick="toast('Form thêm người liên hệ sẽ nối backend')">Thêm người</button></div>${(s.contacts||[]).map(c=>`<div class="stake"><div><b>${esc(c.name)} · ${esc(c.role)}</b><p>${esc(c.decision)} · ${esc(c.sentiment)} · ${esc(c.email)}</p></div><span class="tag ${c.decision==='Người quyết định'?'brand':''}">${esc(c.decision)}</span></div>`).join('')||'<div class="empty">Chưa có người liên hệ.</div>'}`;
  } else if(currentTab==='engagement'){
