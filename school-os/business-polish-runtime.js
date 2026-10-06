@@ -41,7 +41,7 @@
   function dynamicPerformance(){
     const box=$('peoplePerf');if(!box||typeof window.perfFor!=='function')return;
     const names=[...new Set([...st().schools.map(x=>x.owner),...st().tasks.map(x=>x.owner),...st().opps.map(x=>x.owner)].filter(Boolean))];
-    box.innerHTML=names.map(n=>{const p=window.perfFor(n);return `<div class="card person"><h3>${esc(n)}</h3><p>${p.schools} trường · ${p.opps} cơ hội</p><div class="metricline"><span>Nỗ lực ghi nhận</span><b>${p.effort}</b></div><div class="metricline"><span>Kỷ luật hoàn thành</span><b>${p.discipline}%</b></div><div class="metricline"><span>Chất lượng cơ hội</span><b>${p.quality}%</b></div><div class="metricline"><span>Giá trị cơ hội quy đổi</span><b>${p.outcome}tr</b></div><p>${p.discipline<60?'Cần tập trung follow-up đúng hạn.':p.quality<55?'Nên làm rõ chất lượng cơ hội.':'Nhịp làm việc đang tương đối tốt.'}</p></div>`}).join('')||'<div class="empty">Chưa có dữ liệu phụ trách.</div>';
+    box.innerHTML=names.map(n=>{const p=window.perfFor(n);return `<div class="card person"><h3>${esc(n)}</h3><p>${p.schools} trường · ${p.opps} cơ hội</p><div class="metricline"><span>Nỗ lực ghi nhận</span><b>${p.effort}</b></div><div class="metricline"><span>Kỷ luật hoàn thành</span><b>${p.discipline}%</b></div><div class="metricline"><span>Chất lượng cơ hội</span><b>${p.quality}%</b></div><div class="metricline"><span>Giá trị cơ hội quy đổi</span><b>${p.outcome}tr</b></div><p>${p.discipline<60?'Cần xử lý các việc đến hạn đúng thời gian.':p.quality<55?'Nên làm rõ chất lượng cơ hội.':'Nhịp làm việc đang tương đối tốt.'}</p></div>`}).join('')||'<div class="empty">Chưa có dữ liệu phụ trách.</div>';
   }
 
   function installMobileManager(){
@@ -54,8 +54,8 @@
   function updateMobileManager(){const nav=document.querySelector('.mobile'),b=$('mobileManager');if(!nav||!b)return;const show=manager();b.style.display=show?'':'none';nav.style.gridTemplateColumns=show?'repeat(5,1fr)':'repeat(4,1fr)';}
 
   function cleanLabels(){
-    const source=$('ssource');if(source){[...source.options].forEach(o=>{if(o.textContent==='Cold outreach'){o.value='Cold outreach';o.textContent='Tiếp cận chủ động';}});}
-    const tpl=$('emailTpl');if(tpl){[...tpl.options].forEach(o=>{if(o.textContent==='Follow-up sau khi gửi hồ sơ'){o.value='Follow-up sau khi gửi hồ sơ';o.textContent='Theo dõi sau khi gửi hồ sơ';}});}
+    const source=$('ssource');if(source){[...source.options].forEach(o=>{if(o.textContent==='Tiếp cận chủ động'){o.value='Tiếp cận chủ động';o.textContent='Tiếp cận chủ động';}});}
+    const tpl=$('emailTpl');if(tpl){[...tpl.options].forEach(o=>{if(o.textContent==='Theo dõi sau khi gửi hồ sơ'){o.value='Theo dõi sau khi gửi hồ sơ';o.textContent='Theo dõi sau khi gửi hồ sơ';}});}
   }
 
   function patch(){
